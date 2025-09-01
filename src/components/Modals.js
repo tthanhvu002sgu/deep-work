@@ -227,3 +227,37 @@ export const ConfirmDeleteModal = ({ task, onConfirm, onCancel }) => (
         </div>
     </div>
 );
+
+export const LoadingModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg p-6 shadow-xl">
+            <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="text-lg font-medium">Đang đồng bộ dữ liệu...</span>
+            </div>
+        </div>
+    </div>
+);
+
+export const ErrorModal = ({ error, onClose, onRetry }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full">
+            <h3 className="text-lg font-bold text-red-600 mb-2">⚠️ Lỗi</h3>
+            <p className="text-sm text-gray-600 mb-4">{error || 'Đã có lỗi xảy ra'}</p>
+            <div className="flex space-x-3">
+                <button 
+                    onClick={onRetry}
+                    className="flex-1 py-2.5 font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                    Thử lại
+                </button>
+                <button 
+                    onClick={onClose}
+                    className="flex-1 py-2.5 font-semibold bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+);

@@ -2,12 +2,17 @@
   "name": "deepwork",
   "version": "0.1.0",
   "private": true,
+  "homepage": "./",
+  "main": "public/electron.js",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "chart.js": "^4.5.0",
+    "dotenv": "^17.2.1",
+    "electron-is-dev": "^3.0.1",
+    "google-auth-library": "^10.3.0",
     "react": "^19.1.1",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.1",
@@ -20,7 +25,11 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "electron": "electron .",
+    "electron-dev": "concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-pack": "npm run build && electron-builder",
+    "preelectron-pack": "npm run build"
   },
   "eslintConfig": {
     "extends": [
@@ -42,8 +51,49 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.4",
+    "electron-builder": "^24.9.1",
     "gh-pages": "^6.3.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.deepwork.app",
+    "productName": "DeepWork",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "node_modules/**/*",
+      "public/electron.js"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "contributes": {
+    "configuration": {
+      "properties": {
+        "deepwork.allowExternalAuth": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow external authentication requests"
+        }
+      }
+    }
   }
 }

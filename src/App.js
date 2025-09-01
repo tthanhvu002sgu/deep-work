@@ -5,40 +5,41 @@ import Header from "./components/Header";
 import TaskList from "./components/TaskList";
 import FocusView from "./components/FocusView";
 import HistoryView from "./components/HistoryView";
+import GoogleAuth from "./components/GoogleAuth";
 import {
   TaskModal,
   SessionEndModal,
   ConfirmStopModal,
   ConfirmDeleteModal,
   DailyTargetModal,
+  LoadingModal,
+  ErrorModal,
 } from "./components/Modals";
+import { useGoogleSheets } from "./hooks/useGoogleSheets";
+import googleAuthService from "./services/googleAuthService";
 
 const App = () => {
-  const [tasks, setTasks] = useState(() => {
-    try {
-      const saved = localStorage.getItem("deepwork_tasks_v3");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
-  const [sessions, setSessions] = useState(() => {
-    try {
-      const saved = localStorage.getItem("deepwork_sessions_v3");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Use Google Sheets hook
+  const {
+    tasks,
+    sessions,
+    loading,
+    error,
+    addTask,
+    deleteTask,
+    addSession,
+    refreshData,
+  } = useGoogleSheets();
 
-  // Daily target state - not saved to localStorage, resets daily
+  // Daily target state
   const [dailyTarget, setDailyTarget] = useState(() => {
     const today = new Date().toDateString();
     const savedTarget = localStorage.getItem("deepwork_daily_target");
     const savedDate = localStorage.getItem("deepwork_daily_target_date");
 
-    // Reset target if it's a new day
     if (savedDate !== today) {
       localStorage.removeItem("deepwork_daily_target");
       localStorage.removeItem("deepwork_daily_target_date");
@@ -54,15 +55,38 @@ const App = () => {
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [filter, setFilter] = useState("day");
 
+  // Check authentication status on mount
   useEffect(() => {
-    localStorage.setItem("deepwork_tasks_v3", JSON.stringify(tasks));
-  }, [tasks]);
+    const checkAuth = () => {
+      const isAuth = googleAuthService.isAuthenticated();
+      setIsAuthenticated(isAuth);
 
-  useEffect(() => {
-    localStorage.setItem("deepwork_sessions_v3", JSON.stringify(sessions));
-  }, [sessions]);
+      // Show session info in console for debugging
+      const sessionInfo = googleAuthService.getSessionInfo();
+      if (sessionInfo) {
+        console.log("Session Info:", sessionInfo);
+      }
+    };
 
-  // Save daily target but check for date changes
+    checkAuth();
+
+    // Check auth status periodically (every 5 minutes)
+    const interval = setInterval(checkAuth, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle authentication success
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(googleAuthService.isAuthenticated());
+    setShowAuth(false);
+    refreshData(); // Refresh data after authentication
+
+    // Show success message
+    console.log("Authentication successful with persistent session");
+  };
+
+  // Save daily target
   useEffect(() => {
     const today = new Date().toDateString();
     if (dailyTarget > 0) {
@@ -93,7 +117,6 @@ const App = () => {
     });
   }, [sessions, filter]);
 
-  // Calculate today's total focus time
   const todayFocusTime = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -106,32 +129,43 @@ const App = () => {
     return todaySessions.reduce((acc, session) => acc + session.duration, 0);
   }, [sessions]);
 
-  const handleAddTask = (taskName) => {
-    const newTask = { id: Date.now(), name: taskName };
-    setTasks((prevTasks) => [...prevTasks, newTask]);
-    setModal(null);
+  // Event handlers (same as before)
+  const handleAddTask = async (taskName) => {
+    try {
+      await addTask(taskName);
+      setModal(null);
+    } catch (error) {
+      if (!isAuthenticated) {
+        setShowAuth(true);
+      } else {
+        setModal("error");
+      }
+    }
   };
 
   const handleStartSession = (task, duration) => {
     const session = {
       task: task,
-      duration: duration === 0 ? 0 : duration * 60, // Keep 0 for free mode
+      duration: duration === 0 ? 0 : duration * 60,
     };
     setActiveSession(session);
     setModal(null);
   };
 
-  const handleAddSession = (timeWorked) => {
+  const handleAddSession = async (timeWorked) => {
     if (!activeSession) return;
-    const newSession = {
-      id: Date.now(),
-      taskId: activeSession.task.id,
-      duration: timeWorked,
-      completedAt: new Date().toISOString(),
-    };
-    setSessions((prevSessions) => [...prevSessions, newSession]);
-    setActiveSession(null);
-    setModal(null);
+
+    try {
+      await addSession(activeSession.task.id, timeWorked);
+      setActiveSession(null);
+      setModal(null);
+    } catch (error) {
+      if (!isAuthenticated) {
+        setShowAuth(true);
+      } else {
+        setModal("error");
+      }
+    }
   };
 
   const handleStopSession = () => {
@@ -144,22 +178,20 @@ const App = () => {
     setModal("confirmDelete");
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
 
-    // Remove the task
-    setTasks((prevTasks) =>
-      prevTasks.filter((task) => task.id !== taskToDelete.id)
-    );
-
-    // Remove all sessions related to this task
-    setSessions((prevSessions) =>
-      prevSessions.filter((session) => session.taskId !== taskToDelete.id)
-    );
-
-    // Close modal and reset state
-    setModal(null);
-    setTaskToDelete(null);
+    try {
+      await deleteTask(taskToDelete.id);
+      setModal(null);
+      setTaskToDelete(null);
+    } catch (error) {
+      if (!isAuthenticated) {
+        setShowAuth(true);
+      } else {
+        setModal("error");
+      }
+    }
   };
 
   const handleCancelDelete = () => {
@@ -168,12 +200,37 @@ const App = () => {
   };
 
   const handleSetDailyTarget = (targetMinutes) => {
-    setDailyTarget(targetMinutes * 60); // Convert minutes to seconds
+    setDailyTarget(targetMinutes * 60);
+    setModal(null);
+  };
+
+  const handleErrorClose = () => {
+    setModal(null);
+  };
+
+  const handleRetry = () => {
+    refreshData();
     setModal(null);
   };
 
   return (
     <div className="h-screen w-screen bg-slate-100 text-slate-800 antialiased overflow-hidden flex flex-col">
+      {showAuth && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <GoogleAuth onAuthSuccess={handleAuthSuccess} />
+            <div className="p-4 border-t">
+              <button
+                onClick={() => setShowAuth(false)}
+                className="w-full py-2 text-gray-600 hover:text-gray-800"
+              >
+                Tiếp tục với dữ liệu local
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!activeSession ? (
         <>
           <Header
@@ -185,6 +242,11 @@ const App = () => {
           />
 
           <div className="flex-grow overflow-y-auto px-4 pb-24">
+            {/* Show auth status */}
+            <div className="mb-4">
+              <GoogleAuth onAuthSuccess={handleAuthSuccess} />
+            </div>
+
             <HistoryView
               sessions={filteredSessions}
               tasks={tasks}
@@ -205,6 +267,7 @@ const App = () => {
             onClick={() => setModal("addTask")}
             className="fixed bottom-6 right-6 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-700 transition transform hover:scale-110 z-20"
             aria-label="Thêm task mới"
+            disabled={loading}
           >
             <svg
               className="w-7 h-7"
@@ -229,6 +292,17 @@ const App = () => {
         />
       )}
 
+      {/* Modals (same as before) */}
+      {loading && <LoadingModal />}
+
+      {modal === "error" && (
+        <ErrorModal
+          error={error}
+          onClose={handleErrorClose}
+          onRetry={handleRetry}
+        />
+      )}
+
       {(modal === "addTask" || modal === "startTask") && (
         <TaskModal
           task={taskToStart}
@@ -243,7 +317,7 @@ const App = () => {
 
       {modal === "dailyTarget" && (
         <DailyTargetModal
-          currentTarget={Math.round(dailyTarget / 60)} // Convert seconds to minutes
+          currentTarget={Math.round(dailyTarget / 60)}
           onClose={() => setModal(null)}
           onSetTarget={handleSetDailyTarget}
         />

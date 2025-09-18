@@ -1,13 +1,138 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://sheets.googleapis.com https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com;">
-  <title>DeepWork</title>
-  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-</head>
-<body>
-  <div id="root"></div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="DeepWork - Ứng dụng quản lý thời gian và năng suất làm việc theo phương pháp Pomodoro"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Preload notification sound -->
+    <link rel="preload" href="%PUBLIC_URL%/noti.mp3" as="audio" type="audio/mpeg" />
+    
+    <title>DeepWork - Quản lý thời gian hiệu quả</title>
+    
+    <!-- Custom CSS Animations for Enhanced Loading -->
+    <style>
+      /* Custom keyframes for attractive animations */
+      @keyframes progress {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+      }
+      
+      @keyframes animate-reverse {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(-360deg); }
+      }
+      
+      @keyframes fade-in-out {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      
+      @keyframes glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(147, 51, 234, 0.6); }
+      }
+      
+      /* Apply custom animations */
+      .animate-reverse {
+        animation: animate-reverse 2s linear infinite;
+      }
+      
+      .animate-fade-in-out {
+        animation: fade-in-out 2s ease-in-out infinite;
+      }
+      
+      .animate-float {
+        animation: float 3s ease-in-out infinite;
+      }
+      
+      .animate-glow {
+        animation: glow 2s ease-in-out infinite;
+      }
+      
+      /* Smooth gradient animation */
+      .gradient-shift {
+        background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #10b981, #f59e0b);
+        background-size: 400% 400%;
+        animation: gradient-shift 3s ease infinite;
+      }
+      
+      @keyframes gradient-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      
+      /* Particle effects */
+      .particle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        background: radial-gradient(circle, #3b82f6, transparent);
+        border-radius: 50%;
+        animation: particle-float 4s linear infinite;
+      }
+      
+      @keyframes particle-float {
+        0% { 
+          transform: translateY(100px) translateX(0px) scale(0);
+          opacity: 0;
+        }
+        10% { 
+          opacity: 1;
+          transform: translateY(80px) translateX(10px) scale(1);
+        }
+        90% { 
+          opacity: 1;
+          transform: translateY(-80px) translateX(-10px) scale(1);
+        }
+        100% { 
+          transform: translateY(-100px) translateX(0px) scale(0);
+          opacity: 0;
+        }
+      }
+    </style>
+    
+    <!-- Tab focus enhancement script -->
+    <script>
+      // Store original title for restoration
+      window.originalTitle = document.title;
+      
+      // Enhanced tab focus function
+      window.focusTab = function() {
+        try {
+          // Focus the window
+          window.focus();
+          
+          // Scroll to top to ensure visibility
+          window.scrollTo(0, 0);
+          
+          // Try to request attention (modern browsers may ignore this)
+          if (window.requestStorageAccess) {
+            // Attempt to bring attention to tab (limited browser support)
+            console.log('Attempting to focus tab...');
+          }
+        } catch (error) {
+          console.log('Tab focus method not fully supported:', error);
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <noscript>Bạn cần bật JavaScript để chạy ứng dụng này.</noscript>
+    <div id="root"></div>
+  </body>
 </html>

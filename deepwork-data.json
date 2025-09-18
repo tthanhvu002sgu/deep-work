@@ -1,0 +1,614 @@
+{
+  "tasks": [
+    {
+      "id": 1756716031903,
+      "name": "it support",
+      "createdAt": "2025-09-01T08:40:31.903Z"
+    },
+    {
+      "id": 1756716089098,
+      "name": "english",
+      "createdAt": "2025-09-01T08:41:29.098Z"
+    }
+  ],
+  "sessions": [
+    {
+      "id": 1756716248222,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "completedAt": "2025-09-01T08:44:08.222Z"
+    },
+    {
+      "id": 1756802180339,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-02T08:36:20.339Z",
+      "createdAt": "2025-09-02T08:36:20.339Z"
+    },
+    {
+      "id": 1756803319314,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-02T08:55:19.314Z",
+      "createdAt": "2025-09-02T08:55:19.314Z"
+    },
+    {
+      "id": 1756803539434,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-02T08:58:59.434Z",
+      "createdAt": "2025-09-02T08:58:59.434Z"
+    },
+    {
+      "id": 1756804145018,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-02T09:09:05.018Z",
+      "createdAt": "2025-09-02T09:09:05.018Z"
+    },
+    {
+      "id": 1756899794920,
+      "taskId": 1756716089098,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-03T11:43:14.920Z",
+      "createdAt": "2025-09-03T11:43:14.920Z"
+    },
+    {
+      "id": 1756914596327,
+      "taskId": 1756716031903,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-03T15:49:56.327Z",
+      "createdAt": "2025-09-03T15:49:56.327Z"
+    },
+    {
+      "id": 1756999282822,
+      "taskId": 1756716089098,
+      "duration": 2100,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-04T15:21:22.822Z",
+      "createdAt": "2025-09-04T15:21:22.822Z"
+    },
+    {
+      "id": 1757042736165,
+      "taskId": 1756716031903,
+      "duration": 1500,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-05T03:25:36.165Z",
+      "createdAt": "2025-09-05T03:25:36.165Z"
+    },
+    {
+      "id": 1757043412317,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-05T03:36:52.317Z",
+      "createdAt": "2025-09-05T03:36:52.317Z"
+    },
+    {
+      "id": 1757135319716,
+      "taskId": 1756716089098,
+      "duration": 2700,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T05:08:39.716Z",
+      "createdAt": "2025-09-06T05:08:39.716Z"
+    },
+    {
+      "id": 1757135728227,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T05:15:28.227Z",
+      "createdAt": "2025-09-06T05:15:28.227Z"
+    },
+    {
+      "id": 1757136124994,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T05:22:04.994Z",
+      "createdAt": "2025-09-06T05:22:04.994Z"
+    },
+    {
+      "id": 1757139438713,
+      "taskId": 1756716089098,
+      "duration": 900,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T06:17:18.713Z",
+      "createdAt": "2025-09-06T06:17:18.713Z"
+    },
+    {
+      "id": 1757163781240,
+      "taskId": 1756716031903,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T13:03:01.240Z",
+      "createdAt": "2025-09-06T13:03:01.240Z"
+    },
+    {
+      "id": 1757164551172,
+      "taskId": 1756716031903,
+      "duration": 600,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T13:15:51.172Z",
+      "createdAt": "2025-09-06T13:15:51.172Z"
+    },
+    {
+      "id": 1757169127641,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T14:32:07.641Z",
+      "createdAt": "2025-09-06T14:32:07.641Z"
+    },
+    {
+      "id": 1757169258960,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T14:34:18.960Z",
+      "createdAt": "2025-09-06T14:34:18.960Z"
+    },
+    {
+      "id": 1757171929231,
+      "taskId": 1756716089098,
+      "duration": 900,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-06T15:18:49.231Z",
+      "createdAt": "2025-09-06T15:18:49.231Z"
+    },
+    {
+      "id": 1757240738213,
+      "taskId": 1756716089098,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-07T10:25:38.213Z",
+      "createdAt": "2025-09-07T10:25:38.213Z"
+    },
+    {
+      "id": 1757255113078,
+      "taskId": 1756716031903,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-07T14:25:13.078Z",
+      "createdAt": "2025-09-07T14:25:13.078Z"
+    },
+    {
+      "id": 1757323715865,
+      "taskId": 1756716089098,
+      "duration": 1500,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-08T09:28:35.865Z",
+      "createdAt": "2025-09-08T09:28:35.865Z"
+    },
+    {
+      "id": 1757342928982,
+      "taskId": 1756716089098,
+      "duration": 1800,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-08T14:48:48.982Z",
+      "createdAt": "2025-09-08T14:48:48.982Z"
+    },
+    {
+      "id": 1757345749731,
+      "taskId": 1756716031903,
+      "duration": 900,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-08T15:35:49.731Z",
+      "createdAt": "2025-09-08T15:35:49.731Z"
+    },
+    {
+      "id": 1757603581027,
+      "taskId": 1756716031903,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-11T15:13:01.027Z",
+      "createdAt": "2025-09-11T15:13:01.027Z"
+    },
+    {
+      "id": 1757606463738,
+      "taskId": 1756716089098,
+      "duration": 1200,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-11T16:01:03.738Z",
+      "createdAt": "2025-09-11T16:01:03.738Z"
+    },
+    {
+      "id": 1757658232824,
+      "taskId": 1756716031903,
+      "duration": 3000,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-12T06:23:52.824Z",
+      "createdAt": "2025-09-12T06:23:52.824Z"
+    },
+    {
+      "id": 1757737690975,
+      "taskId": 1756716031903,
+      "duration": 3000,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-13T04:28:10.975Z",
+      "createdAt": "2025-09-13T04:28:10.975Z"
+    },
+    {
+      "id": 1757746493127,
+      "taskId": 1756716031903,
+      "duration": 900,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-13T06:54:53.127Z",
+      "createdAt": "2025-09-13T06:54:53.127Z"
+    },
+    {
+      "id": 1757756266384,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-13T09:37:46.384Z",
+      "createdAt": "2025-09-13T09:37:46.384Z"
+    },
+    {
+      "id": 1757768118724,
+      "taskId": 1756716089098,
+      "duration": 1500,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-13T12:55:18.724Z",
+      "createdAt": "2025-09-13T12:55:18.724Z"
+    },
+    {
+      "id": 1757779113344,
+      "taskId": 1756716031903,
+      "duration": 3000,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-13T15:58:33.344Z",
+      "createdAt": "2025-09-13T15:58:33.344Z"
+    },
+    {
+      "id": 1757843872227,
+      "taskId": 1756716031903,
+      "duration": 3000,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-14T09:57:52.227Z",
+      "createdAt": "2025-09-14T09:57:52.227Z"
+    },
+    {
+      "id": 1757855661988,
+      "taskId": 1756716031903,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-14T13:14:21.988Z",
+      "createdAt": "2025-09-14T13:14:21.988Z"
+    },
+    {
+      "id": 1757857385276,
+      "taskId": 1756716031903,
+      "duration": 600,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-14T13:43:05.276Z",
+      "createdAt": "2025-09-14T13:43:05.276Z"
+    },
+    {
+      "id": 1757865770293,
+      "taskId": 1756716089098,
+      "duration": 1800,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-14T16:02:50.293Z",
+      "createdAt": "2025-09-14T16:02:50.293Z"
+    },
+    {
+      "id": 1757899014112,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-15T01:16:54.112Z",
+      "createdAt": "2025-09-15T01:16:54.112Z"
+    },
+    {
+      "id": 1757899265631,
+      "taskId": 1756716031903,
+      "duration": 180,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-15T01:21:05.631Z",
+      "createdAt": "2025-09-15T01:21:05.631Z"
+    },
+    {
+      "id": 1757908535277,
+      "taskId": 1756716031903,
+      "duration": 1500,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-15T03:55:35.277Z",
+      "createdAt": "2025-09-15T03:55:35.277Z"
+    },
+    {
+      "id": 1757947813122,
+      "taskId": 1756716089098,
+      "duration": 1800,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-15T14:50:13.122Z",
+      "createdAt": "2025-09-15T14:50:13.122Z"
+    },
+    {
+      "id": 1757949897118,
+      "taskId": 1756716089098,
+      "duration": 720,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-15T15:24:57.118Z",
+      "createdAt": "2025-09-15T15:24:57.118Z"
+    },
+    {
+      "id": 1758011320655,
+      "taskId": 1756716031903,
+      "duration": 1500,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-16T08:28:40.655Z",
+      "createdAt": "2025-09-16T08:28:40.655Z"
+    },
+    {
+      "id": 1758030264261,
+      "taskId": 1756716031903,
+      "duration": 2400,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-16T13:44:24.261Z",
+      "createdAt": "2025-09-16T13:44:24.261Z"
+    },
+    {
+      "id": 1758037370971,
+      "taskId": 1756716089098,
+      "duration": 900,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-16T15:42:50.971Z",
+      "createdAt": "2025-09-16T15:42:50.971Z"
+    },
+    {
+      "id": 1758070802321,
+      "taskId": 1756716089098,
+      "duration": 600,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:00:02.321Z",
+      "createdAt": "2025-09-17T01:00:02.321Z"
+    },
+    {
+      "id": 1758071303536,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:08:23.536Z",
+      "createdAt": "2025-09-17T01:08:23.536Z"
+    },
+    {
+      "id": 1758071475672,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:11:15.672Z",
+      "createdAt": "2025-09-17T01:11:15.672Z"
+    },
+    {
+      "id": 1758072389511,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:26:29.511Z",
+      "createdAt": "2025-09-17T01:26:29.511Z"
+    },
+    {
+      "id": 1758073386428,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:43:06.428Z",
+      "createdAt": "2025-09-17T01:43:06.428Z"
+    },
+    {
+      "id": 1758073589752,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:46:29.752Z",
+      "createdAt": "2025-09-17T01:46:29.752Z"
+    },
+    {
+      "id": 1758073990069,
+      "taskId": 1756716031903,
+      "duration": 48,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T01:53:10.069Z",
+      "createdAt": "2025-09-17T01:53:10.069Z"
+    },
+    {
+      "id": 1758074893143,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:08:13.143Z",
+      "createdAt": "2025-09-17T02:08:13.143Z"
+    },
+    {
+      "id": 1758075106891,
+      "taskId": 1756716089098,
+      "duration": 53,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:11:46.891Z",
+      "createdAt": "2025-09-17T02:11:46.891Z"
+    },
+    {
+      "id": 1758075723373,
+      "taskId": 1756716031903,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:22:03.373Z",
+      "createdAt": "2025-09-17T02:22:03.373Z"
+    },
+    {
+      "id": 1758075869527,
+      "taskId": 1756716089098,
+      "duration": 60,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:24:29.527Z",
+      "createdAt": "2025-09-17T02:24:29.527Z"
+    },
+    {
+      "id": 1758076123657,
+      "taskId": 1756716031903,
+      "duration": 49,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:28:43.657Z",
+      "createdAt": "2025-09-17T02:28:43.657Z"
+    },
+    {
+      "id": 1758076311742,
+      "taskId": 1756716031903,
+      "duration": 1,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:31:51.742Z",
+      "createdAt": "2025-09-17T02:31:51.742Z"
+    },
+    {
+      "id": 1758076940951,
+      "taskId": 1756716089098,
+      "duration": 49,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T02:42:20.951Z",
+      "createdAt": "2025-09-17T02:42:20.951Z"
+    },
+    {
+      "id": 1758104034225,
+      "taskId": 1756716089098,
+      "duration": 900,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T10:13:54.225Z",
+      "createdAt": "2025-09-17T10:13:54.225Z"
+    },
+    {
+      "id": 1758117526462,
+      "taskId": 1756716031903,
+      "duration": 1872,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T13:58:46.462Z",
+      "createdAt": "2025-09-17T13:58:46.462Z"
+    },
+    {
+      "id": 1758123387116,
+      "taskId": 1756716089098,
+      "duration": 1500,
+      "plannedDuration": null,
+      "sessionType": "work",
+      "completedAt": "2025-09-17T15:36:27.116Z",
+      "createdAt": "2025-09-17T15:36:27.116Z"
+    }
+  ],
+  "dailyTargets": {
+    "2025-09-03": {
+      "targetMinutes": 120,
+      "targetDate": "2025-09-03",
+      "createdAt": "2025-09-03T03:09:45.704Z",
+      "updatedAt": "2025-09-03T03:09:45.704Z"
+    },
+    "2025-09-04": {
+      "targetMinutes": 75,
+      "targetDate": "2025-09-04",
+      "createdAt": "2025-09-04T13:07:29.902Z",
+      "updatedAt": "2025-09-04T13:07:29.902Z"
+    },
+    "2025-09-06": {
+      "targetMinutes": 120,
+      "targetDate": "2025-09-06",
+      "createdAt": "2025-09-06T03:40:56.886Z",
+      "updatedAt": "2025-09-06T03:40:56.886Z"
+    },
+    "2025-09-07": {
+      "targetMinutes": 120,
+      "targetDate": "2025-09-07",
+      "createdAt": "2025-09-07T02:24:15.067Z",
+      "updatedAt": "2025-09-07T02:24:15.067Z"
+    },
+    "2025-09-08": {
+      "targetMinutes": 90,
+      "targetDate": "2025-09-08",
+      "createdAt": "2025-09-08T00:14:07.674Z",
+      "updatedAt": "2025-09-08T00:14:07.674Z"
+    },
+    "2025-09-17": {
+      "targetMinutes": 130,
+      "targetDate": "2025-09-17",
+      "createdAt": "2025-09-17T02:54:48.705Z",
+      "updatedAt": "2025-09-17T02:54:48.705Z"
+    }
+  },
+  "settings": {
+    "defaultWorkDuration": 25,
+    "defaultBreakDuration": 5,
+    "defaultLongBreakDuration": 15,
+    "soundEnabled": true,
+    "notificationEnabled": true,
+    "autoStartBreaks": false,
+    "darkMode": false
+  },
+  "metadata": {
+    "created": "2025-09-17T02:31:19.024Z",
+    "version": "1.0.0",
+    "lastSaved": "2025-09-18T00:59:20.365Z"
+  }
+}

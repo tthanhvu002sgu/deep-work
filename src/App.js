@@ -29,8 +29,7 @@ const App = () => {
   const [taskToStart, setTaskToStart] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [filter, setFilter] = useState("day");
-  const [isTransitioning, setIsTransitioning] = useState(false); // Track transition state
-  // FIX: Add state to track the current date and trigger updates
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentDateKey, setCurrentDateKey] = useState(
     new Date().toDateString()
   );
@@ -48,9 +47,9 @@ const App = () => {
     return () => clearInterval(dayCheckInterval);
   }, [currentDateKey]);
 
-  // Load initial data
+  // Load initial data - SIMPLIFIED (removed startTime logic)
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadApp = async () => {
       setLoading(true);
       try {
         const [tasksData, sessionsData, targetData] = await Promise.all([
@@ -61,12 +60,12 @@ const App = () => {
 
         setTasks(tasksData);
         setSessions(sessionsData);
-        setDailyTarget(targetData.targetMinutes * 60); // Convert to seconds
+        setDailyTarget(targetData.targetMinutes * 60);
 
-        console.log("Initial data loaded:", {
+        console.log('Initial data loaded:', {
           tasks: tasksData.length,
           sessions: sessionsData.length,
-          target: targetData.targetMinutes,
+          target: targetData.targetMinutes
         });
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -76,7 +75,7 @@ const App = () => {
       }
     };
 
-    loadInitialData();
+    loadApp();
 
     return () => {
       fileStorageService.cleanup();
@@ -86,7 +85,7 @@ const App = () => {
   // Auto-refresh data when file changes (for manual sync)
   useEffect(() => {
     const refreshInterval = setInterval(async () => {
-      if (isTransitioning || activeSession) return; // Skip during session or transition
+      if (isTransitioning || activeSession) return;
 
       try {
         const [tasksData, sessionsData] = await Promise.all([
@@ -112,18 +111,17 @@ const App = () => {
     return () => clearInterval(refreshInterval);
   }, [tasks, sessions, isTransitioning, activeSession]);
 
+  // Helper function to get start of week (Monday)
+  const getStartOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  };
+
   // Memoized filtered sessions
   const filteredSessions = useMemo(() => {
     const now = new Date();
-
-    // FIX: Consistent week calculation (Monday to Sunday)
-    const getStartOfWeek = (date) => {
-      const d = new Date(date);
-      const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
-      return new Date(d.setDate(diff));
-    };
-
     const startOfThisWeek = getStartOfWeek(now);
     startOfThisWeek.setHours(0, 0, 0, 0);
 
@@ -133,7 +131,6 @@ const App = () => {
       const sessionDate = new Date(session.completedAt);
       switch (filter) {
         case "week":
-          // Filter for the current week from Monday to Sunday
           return sessionDate >= startOfThisWeek;
         case "month":
           return (
@@ -154,7 +151,6 @@ const App = () => {
     });
 
     return filtered;
-    // FIX: Add currentDateKey to dependency array to re-calculate on new day
   }, [sessions, filter, currentDateKey]);
 
   // Memoized today focus time
@@ -177,7 +173,6 @@ const App = () => {
     });
 
     return totalTime;
-    // FIX: Add currentDateKey to dependency array to re-calculate on new day
   }, [sessions, currentDateKey]);
 
   // Task management functions
@@ -207,7 +202,6 @@ const App = () => {
     try {
       await fileStorageService.deleteTask(taskId);
 
-      // Update state immediately
       setTasks((prev) => prev.filter((task) => task.id !== taskId));
       setSessions((prev) =>
         prev.filter((session) => session.taskId !== taskId)
@@ -224,33 +218,26 @@ const App = () => {
     }
   }, []);
 
-  // CRITICAL FIX: Đảm bảo dữ liệu được lưu và UI được cập nhật ngay lập tức
+  // Session handling
   const addSession = useCallback(async (taskId, duration) => {
     console.log("🔄 Bắt đầu lưu phiên:", { taskId, duration });
 
     try {
-      // Lưu phiên làm việc
       const newSession = await fileStorageService.addSession(taskId, duration);
       console.log("💾 Phiên làm việc đã lưu:", newSession);
 
-      // Thêm session mới vào state NGAY LẬP TỨC để UI cập nhật ngay
-      // (sử dụng functional update để tránh stale state)
       setSessions((prevSessions) => {
-        // Kiểm tra trùng lặp để tránh double counting
         if (prevSessions.some((s) => s.id === newSession.id)) {
           return prevSessions;
         }
-        // Thêm session mới vào danh sách
         return [...prevSessions, newSession];
       });
 
-      // Đảm bảo lưu xuống storage hoàn tất
       if (typeof fileStorageService.forceSave === "function") {
         await fileStorageService.forceSave();
         console.log("✅ Đã lưu dữ liệu vào storage");
       }
 
-      // BUGFIX: Trả về session mới để tham chiếu bên ngoài
       return newSession;
     } catch (error) {
       console.error("❌ Lỗi khi lưu phiên làm việc:", error);
@@ -259,7 +246,6 @@ const App = () => {
     }
   }, []);
 
-  // Phiên làm việc kết thúc - cập nhật để đảm bảo UI refresh đúng thời điểm
   const handleAddSession = useCallback(
     async (timeWorked) => {
       if (!activeSession) {
@@ -276,19 +262,14 @@ const App = () => {
       try {
         setIsTransitioning(true);
 
-        // Lưu phiên làm việc vào storage và cập nhật state
         await addSession(activeSession.task.id, timeWorked);
 
-        // Đảm bảo state sessions đã được cập nhật trước khi reset activeSession
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        // Sau khi dữ liệu đã được cập nhật, chuyển về màn hình chính
         setActiveSession(null);
         setModal(null);
 
-        // BUGFIX: Trigger re-render sau khi đã về màn hình chính
         setTimeout(() => {
-          // Trick để force re-render HistoryView
           setSessions((prevSessions) => [...prevSessions]);
           console.log("🔄 Đã force re-render sau khi về màn hình chính");
         }, 100);
@@ -304,7 +285,6 @@ const App = () => {
     [activeSession, addSession]
   );
 
-  // Bỏ qua phiên làm việc, không lưu dữ liệu
   const handleStopSession = useCallback(() => {
     console.log("⏹️ Dừng phiên làm việc mà không lưu");
     setActiveSession(null);
@@ -393,28 +373,11 @@ const App = () => {
     }
   }, []);
 
-  // Debug effect
-  useEffect(() => {
-    console.log("📈 Current state:", {
-      totalSessions: sessions.length,
-      filteredSessions: filteredSessions.length,
-      todayFocusTime: todayFocusTime,
-      isTransitioning: isTransitioning,
-      hasActiveSession: !!activeSession,
-    });
-  }, [
-    sessions.length,
-    filteredSessions.length,
-    todayFocusTime,
-    isTransitioning,
-    activeSession,
-  ]);
-
-  // Function to handle starting a session when user selects a task
+  // SIMPLIFIED: handleStartSession (removed hasStartedFirstSession logic)
   const handleStartSession = useCallback((task, duration) => {
     const session = {
       task: task,
-      duration: duration === 0 ? 0 : duration * 60, // Convert minutes to seconds
+      duration: duration === 0 ? 0 : duration * 60,
     };
     setActiveSession(session);
     setModal(null);
@@ -422,7 +385,6 @@ const App = () => {
     console.log("Starting session:", session);
   }, []);
 
-  // Function to handle adding a new task
   const handleAddTask = useCallback(
     async (taskName) => {
       try {
@@ -448,12 +410,25 @@ const App = () => {
           />
 
           <div className="flex-grow overflow-y-auto px-4 pb-24">
+            {isTransitioning && (
+              <div className="fixed inset-0 z-30 bg-white bg-opacity-75 flex items-center justify-center">
+                <div className="bg-white rounded-lg p-6 shadow-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="text-lg font-medium">Đang lưu kết quả...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <HistoryView
               sessions={filteredSessions}
               tasks={tasks}
               filter={filter}
               setFilter={setFilter}
               dailyTargets={{}}
+              // NEW: pass all sessions for overview
+              allSessions={sessions}
             />
             <TaskList
               tasks={tasks}
@@ -506,10 +481,8 @@ const App = () => {
         />
       )}
 
-      {/* Loading Modal */}
       {loading && <LoadingModal />}
 
-      {/* Error Modal */}
       {modal === "error" && (
         <ErrorModal
           error={error}
@@ -518,7 +491,6 @@ const App = () => {
         />
       )}
 
-      {/* File Manager Modal */}
       {modal === "fileManager" && (
         <FileManagerModal
           onClose={() => setModal(null)}

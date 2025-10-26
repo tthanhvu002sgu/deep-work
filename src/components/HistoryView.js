@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import {
@@ -383,9 +382,11 @@ const HistoryView = ({
   filter,
   setFilter,
   dailyTargets = {},
+  // NEW: all sessions for global overview
+  allSessions = [],
 }) => {
   // State for view mode toggle
-  const [viewMode, setViewMode] = useState("chart"); // "chart" or "heatmap"
+  const [viewMode, setViewMode] = useState("chart"); // "chart" or "heatmap" or "overview"
 
   // Auto-reset to chart mode when switching to day filter (heatmap not available for day)
   React.useEffect(() => {
@@ -410,15 +411,16 @@ const HistoryView = ({
     const labels = Object.keys(dataByTask).map(
       (taskId) => taskMap[taskId] || "Task đã xóa"
     );
+    // CONVERT to hours with one decimal place
     const data = Object.values(dataByTask).map((totalSeconds) =>
-      Math.round(totalSeconds / 60)
+      Math.round((totalSeconds / 3600) * 10) / 10
     );
 
     return {
       labels,
       datasets: [
         {
-          label: "Thời gian tập trung (phút)",
+          label: "Thời gian tập trung (giờ)",
           data,
           backgroundColor: "rgba(59, 130, 246, 0.8)",
           borderColor: "rgba(59, 130, 246, 1)",
@@ -444,7 +446,8 @@ const HistoryView = ({
       tooltip: {
         callbacks: {
           label: function (context) {
-            return `${context.parsed.x} phút`;
+            // UPDATE tooltip to show hours
+            return `${context.parsed.x} giờ`;
           },
         },
       },
@@ -454,7 +457,8 @@ const HistoryView = ({
         beginAtZero: true,
         ticks: {
           callback: function (value) {
-            return value + "p";
+            // UPDATE axis ticks to show 'h' for hours
+            return value + "h";
           },
         },
         grid: {
@@ -494,11 +498,129 @@ const HistoryView = ({
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMinutes = Math.round(totalMinutes % 60);
 
+  // NEW: Calculate number of unique days with sessions for average calculation
+  const numberOfDaysWithSessions = useMemo(() => {
+    if (sessions.length === 0) return 0;
+    return new Set(
+      sessions.map((s) => new Date(s.completedAt).toISOString().split("T")[0])
+    ).size;
+  }, [sessions]);
+
   const formatTotalTime = () => {
     if (totalHours > 0) {
       return `${totalHours} giờ ${remainingMinutes} phút`;
     }
     return `${Math.round(totalMinutes)} phút`;
+  };
+
+  // NEW: Global Overview stats (computed from allSessions)
+  const overview = useMemo(() => {
+    if (!allSessions || allSessions.length === 0) {
+      return null;
+    }
+
+    // Basic aggregates
+    const totalSecondsAll = allSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
+    const totalMinutesAll = Math.round(totalSecondsAll / 60);
+
+    // Unique active days
+    const dayKey = (d) => new Date(d).toISOString().split("T")[0];
+    const activeDayKeys = Array.from(new Set(allSessions.map(s => dayKey(s.completedAt)))).sort();
+
+    // Range
+    const firstDay = activeDayKeys[0];
+    const lastDay = activeDayKeys[activeDayKeys.length - 1];
+
+    // Longest streak overall
+    let longestStreak = 0;
+    let currentStreak = 0;
+    for (let i = 0; i < activeDayKeys.length; i++) {
+      if (i === 0) {
+        currentStreak = 1;
+        longestStreak = 1;
+      } else {
+        const prev = new Date(activeDayKeys[i - 1]);
+        const cur = new Date(activeDayKeys[i]);
+        const diffDays = Math.round((cur - prev) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          currentStreak += 1;
+          longestStreak = Math.max(longestStreak, currentStreak);
+        } else {
+          currentStreak = 1;
+        }
+      }
+    }
+
+    // Calendar days in range
+    let calendarDays = 0;
+    if (firstDay && lastDay) {
+      const start = new Date(firstDay);
+      const end = new Date(lastDay);
+      calendarDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    }
+
+    // Averages
+    const avgPerActiveDay = activeDayKeys.length > 0 ? Math.round(totalMinutesAll / activeDayKeys.length) : 0;
+    const avgPerCalendarDay = calendarDays > 0 ? Math.round(totalMinutesAll / calendarDays) : 0;
+    const avgPerSession = allSessions.length > 0 ? Math.round(totalMinutesAll / allSessions.length) : 0;
+
+    // Top tasks by total time
+    const taskTotals = new Map();
+    for (const s of allSessions) {
+      taskTotals.set(s.taskId, (taskTotals.get(s.taskId) || 0) + (s.duration || 0));
+    }
+    const taskNameById = new Map(tasks.map(t => [t.id, t.name]));
+    const topTasks = Array.from(taskTotals.entries())
+      .map(([taskId, secs]) => ({
+        taskId,
+        name: taskNameById.get(taskId) || "Task đã xóa",
+        seconds: secs,
+        minutes: Math.round(secs / 60),
+      }))
+      .sort((a, b) => b.seconds - a.seconds)
+      .slice(0, 5);
+
+    const maxTop = topTasks[0]?.seconds || 1;
+
+    // Longest single session
+    const longest = allSessions.reduce(
+      (best, s) => (s.duration > (best?.duration || 0) ? s : best),
+      null
+    );
+    const longestPretty = longest
+      ? {
+          minutes: Math.round(longest.duration / 60),
+          task: taskNameById.get(longest.taskId) || "Task đã xóa",
+          date: new Date(longest.completedAt).toLocaleString("vi-VN"),
+        }
+      : null;
+
+    return {
+      totalMinutesAll,
+      totalHoursAll: Math.floor(totalMinutesAll / 60),
+      remainingMinutesAll: totalMinutesAll % 60,
+      sessionsCount: allSessions.length,
+      activeDays: activeDayKeys.length,
+      calendarDays,
+      firstDay,
+      lastDay,
+      longestStreak,
+      avgPerActiveDay,
+      avgPerCalendarDay,
+      avgPerSession,
+      topTasks,
+      maxTop,
+      longestPretty,
+    };
+  }, [allSessions, tasks]);
+
+  const formatMinutes = (m) => {
+    if (m >= 60) {
+      const h = Math.floor(m / 60);
+      const mm = m % 60;
+      return mm ? `${h}h ${mm}p` : `${h}h`;
+    }
+    return `${m}p`;
   };
 
   const canShowHeatmap = filter !== "day";
@@ -510,39 +632,47 @@ const HistoryView = ({
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <h2 className="text-lg font-semibold text-gray-900">
-              📊 Thống kê {getFilterText(filter)}
+              {viewMode === "overview" ? "🌐 Tổng quan toàn bộ dữ liệu" : `📊 Thống kê ${getFilterText(filter)}`}
             </h2>
-            
-            {/* View Mode Toggle - Only show for week/month filters */}
-            {canShowHeatmap && (
-              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode("chart")}
-                  className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
-                    viewMode === "chart"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                  title="Biểu đồ cột"
-                >
-                  <span>📊</span>
-                </button>
+
+            {/* View Mode Toggle */}
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("chart")}
+                className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
+                  viewMode === "chart" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                }`}
+                title="Biểu đồ cột"
+              >
+                <span>📊</span>
+              </button>
+
+              {canShowHeatmap && (
                 <button
                   onClick={() => setViewMode("heatmap")}
                   className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
-                    viewMode === "heatmap"
-                      ? "bg-white text-blue-600 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
+                    viewMode === "heatmap" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
                   title="Heatmap"
                 >
                   <span>🔥</span>
                 </button>
-              </div>
-            )}
+              )}
+
+              {/* NEW: Overview button (always available) */}
+              <button
+                onClick={() => setViewMode("overview")}
+                className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
+                  viewMode === "overview" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                }`}
+                title="Tổng quan toàn bộ dữ liệu"
+              >
+                <span>🌐</span>
+              </button>
+            </div>
           </div>
-          
-          {sessions.length > 0 && (
+
+          {viewMode !== "overview" && sessions.length > 0 && (
             <p className="text-sm text-gray-600">
               Tổng cộng:{" "}
               <span className="font-semibold text-blue-600">
@@ -551,94 +681,191 @@ const HistoryView = ({
               ({sessions.length} phiên)
             </p>
           )}
+
+          {viewMode === "overview" && overview && (
+            <p className="text-sm text-gray-600">
+              Từ {new Date(overview.firstDay).toLocaleDateString("vi-VN")} đến {new Date(overview.lastDay).toLocaleDateString("vi-VN")} •{" "}
+              <span className="font-semibold text-blue-600">
+                {overview.totalHoursAll} giờ {overview.remainingMinutesAll} phút
+              </span>{" "}
+              ({overview.sessionsCount} phiên, {overview.activeDays}/{overview.calendarDays} ngày hoạt động)
+            </p>
+          )}
         </div>
 
-        {/* Filter Toggle */}
-        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-          {["day", "week", "month"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                filter === f
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {f === "day" ? "Ngày" : f === "week" ? "Tuần" : "Tháng"}
-            </button>
-          ))}
-        </div>
+        {/* Filter Toggle (ẩn khi Overview để tập trung nội dung) */}
+        {viewMode !== "overview" && (
+          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            {["day", "week", "month"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                  filter === f ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                {f === "day" ? "Ngày" : f === "week" ? "Tuần" : "Tháng"}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content Area */}
-      {sessions.length > 0 ? (
+      {viewMode === "overview" ? (
+        // NEW: Overview Panel (special, eye-catching)
+        <div className="space-y-4">
+          {/* Top KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-xl p-4 bg-gradient-to-br from-blue-600 to-indigo-500 text-white shadow-md">
+              <div className="text-sm opacity-90">Tổng thời gian</div>
+              <div className="text-2xl font-bold mt-1">{overview.totalHoursAll}h {overview.remainingMinutesAll}p</div>
+              <div className="text-xs mt-1 opacity-90">TB/ngày hoạt động: {formatMinutes(overview.avgPerActiveDay)}</div>
+            </div>
+            <div className="rounded-xl p-4 bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-md">
+              <div className="text-sm opacity-90">Phiên làm việc</div>
+              <div className="text-2xl font-bold mt-1">{overview.sessionsCount}</div>
+              <div className="text-xs mt-1 opacity-90">TB/phiên: {formatMinutes(overview.avgPerSession)}</div>
+            </div>
+            <div className="rounded-xl p-4 bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md">
+              <div className="text-sm opacity-90">Chuỗi dài nhất</div>
+              <div className="text-2xl font-bold mt-1">{overview.longestStreak} ngày</div>
+              <div className="text-xs mt-1 opacity-90">TB/ngày lịch: {formatMinutes(overview.avgPerCalendarDay)}</div>
+            </div>
+          </div>
+
+          {/* Top Tasks */}
+          <div className="rounded-xl p-4 border bg-white shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-gray-800">🏆 Top Tasks (toàn bộ dữ liệu)</h3>
+              <span className="text-xs text-gray-500">Đơn vị: phút</span>
+            </div>
+            <div className="space-y-2">
+              {overview.topTasks.map((t) => {
+                const pct = Math.round((t.seconds / overview.maxTop) * 100);
+                return (
+                  <div key={t.taskId}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium text-gray-800">{t.name}</span>
+                      <span className="text-gray-600">{t.minutes}p</span>
+                    </div>
+                    <div className="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
+                      <div
+                        className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
+                        style={{ width: `${pct}%` }}
+                        title={`${pct}%`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {overview.topTasks.length === 0 && (
+                <div className="text-sm text-gray-500">Chưa có dữ liệu.</div>
+              )}
+            </div>
+          </div>
+
+          {/* Longest Session */}
+          {overview.longestPretty && (
+            <div className="rounded-xl p-4 bg-slate-50 border shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="text-3xl">⏱️</div>
+                <div>
+                  <div className="font-semibold text-gray-800">
+                    Phiên dài nhất: {overview.longestPretty.minutes} phút
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Task: <span className="font-medium">{overview.longestPretty.task}</span> • {overview.longestPretty.date}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        // OLD: chart/heatmap content remains
         <>
-          {viewMode === "chart" ? (
+          {sessions.length > 0 ? (
             <>
-              {/* Bar Chart */}
-              <div style={{ height: "250px" }} className="mb-4">
-                <Bar 
-                  data={chartData} 
-                  options={chartOptions} 
-                  key={`chart-${sessions.length}-${JSON.stringify(sessions.map(s => s.id))}`} 
-                />
-              </div>
-              
-              {/* Quick Stats - Only show in chart mode */}
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-100">
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">
-                    Phiên
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {sessions.length}
-                  </p>
+              {viewMode === "chart" ? (
+                <>
+                  {/* Bar Chart */}
+                  <div style={{ height: "250px" }} className="mb-4">
+                    <Bar 
+                      data={chartData} 
+                      options={chartOptions} 
+                      key={`chart-${sessions.length}-${JSON.stringify(sessions.map(s => s.id))}`} 
+                    />
+                  </div>
+                  
+                  {/* Quick Stats - UPDATED to show avg per session and per day */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">
+                        Tổng phiên
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {sessions.length}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">
+                        TB / Phiên
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {sessions.length > 0
+                          ? `${Math.round(totalMinutes / sessions.length)}p`
+                          : "0p"}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">
+                        TB / Ngày
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {numberOfDaysWithSessions > 0
+                          ? `${Math.round(
+                              totalMinutes / numberOfDaysWithSessions
+                            )}p`
+                          : "0p"}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">
+                        Tasks
+                      </p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {new Set(sessions.map((s) => s.taskId)).size}
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="py-2">
+                  <FocusHeatmap
+                    sessions={sessions}
+                    tasks={tasks}
+                    filter={filter}
+                    dailyTargets={dailyTargets}
+                  />
                 </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">
-                    Trung bình
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {Math.round(totalMinutes / sessions.length)}p
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">
-                    Tasks
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {new Set(sessions.map((s) => s.taskId)).size}
-                  </p>
-                </div>
-              </div>
+              )}
             </>
           ) : (
-            /* Focus Heatmap */
-            <div className="py-2">
-              <FocusHeatmap
-                sessions={sessions}
-                tasks={tasks}
-                filter={filter}
-                dailyTargets={dailyTargets}
-              />
+            <div className="text-center py-12 text-gray-500">
+              <div className="text-5xl mb-3">
+                {viewMode === "heatmap" ? "🔥" : "📈"}
+              </div>
+              <h3 className="text-lg font-medium text-gray-700 mb-2">
+                Chưa có dữ liệu {getFilterText(filter)}
+              </h3>
+              <p className="text-sm">
+                Bắt đầu một phiên làm việc để xem{" "}
+                {viewMode === "heatmap" ? "heatmap" : "thống kê"} tại đây
+              </p>
             </div>
           )}
         </>
-      ) : (
-        /* Empty State */
-        <div className="text-center py-12 text-gray-500">
-          <div className="text-5xl mb-3">
-            {viewMode === "heatmap" ? "🔥" : "📈"}
-          </div>
-          <h3 className="text-lg font-medium text-gray-700 mb-2">
-            Chưa có dữ liệu {getFilterText(filter)}
-          </h3>
-          <p className="text-sm">
-            Bắt đầu một phiên làm việc để xem{" "}
-            {viewMode === "heatmap" ? "heatmap" : "thống kê"} tại đây
-          </p>
-        </div>
       )}
     </div>
   );

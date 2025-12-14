@@ -1,7 +1,7 @@
 import React from 'react';
 import TaskItem from './TaskItem';
 
-const TaskList = ({ tasks, onTaskClick, onTaskDelete }) => {
+const TaskList = ({ tasks, onTaskClick, onTaskEdit, onTaskArchive, onTaskDelete }) => {
     return (
         <main className="flex-grow overflow-y-auto px-4 pb-24">
             <div className="space-y-3">
@@ -11,11 +11,15 @@ const TaskList = ({ tasks, onTaskClick, onTaskDelete }) => {
                             key={task.id} 
                             task={task} 
                             onClick={() => onTaskClick(task)}
+                            onEdit={onTaskEdit}
+                            onArchive={onTaskArchive}
                             onDelete={onTaskDelete}
                         />
                     ))
                 ) : (
-                    <p className="text-center text-slate-500 py-10">Bắt đầu ngày làm việc của bạn bằng cách thêm một task mới ✨</p>
+                    <p className="text-center text-slate-500 py-10">
+                        Bắt đầu ngày làm việc của bạn bằng cách thêm một task mới ✨
+                    </p>
                 )}
             </div>
         </main>

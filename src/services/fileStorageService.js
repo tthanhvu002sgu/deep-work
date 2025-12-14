@@ -176,7 +176,10 @@ class FileStorageService {
   }
 
   // Tasks operations
-  async getTasks() {
+  async getTasks(includeArchived = false) {
+    if (includeArchived) {
+      return this.data.tasks;
+    }
     return this.data.tasks.filter(task => !task.isArchived);
   }
 
@@ -205,6 +208,44 @@ class FileStorageService {
     
     await this.saveData(); // Tự động lưu sau khi xóa task
     return true;
+  }
+
+  // NEW: Update task name
+  async updateTask(taskId, updates) {
+    const taskIndex = this.data.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) {
+      throw new Error('Task not found');
+    }
+
+    this.data.tasks[taskIndex] = {
+      ...this.data.tasks[taskIndex],
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+
+    await this.saveData();
+    console.log('✏️ Task updated:', this.data.tasks[taskIndex]);
+    return this.data.tasks[taskIndex];
+  }
+
+  // NEW: Toggle task archive status
+  async toggleTaskArchive(taskId) {
+    const taskIndex = this.data.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) {
+      throw new Error('Task not found');
+    }
+
+    this.data.tasks[taskIndex].isArchived = !this.data.tasks[taskIndex].isArchived;
+    this.data.tasks[taskIndex].updatedAt = new Date().toISOString();
+
+    await this.saveData();
+    console.log('📦 Task archive toggled:', this.data.tasks[taskIndex]);
+    return this.data.tasks[taskIndex];
+  }
+
+  // NEW: Get archived tasks
+  async getArchivedTasks() {
+    return this.data.tasks.filter(task => task.isArchived);
   }
 
   // Sessions operations

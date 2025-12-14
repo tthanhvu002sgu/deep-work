@@ -247,14 +247,14 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
             {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((day) => (
               <div
                 key={day}
-                className="text-xs font-medium text-gray-500 text-center h-6 flex items-center justify-center"
+                className="text-xs font-medium text-gray-500 text-center w-8 h-6 flex items-center justify-center"
               >
                 {day}
               </div>
             ))}
           </div>
           
-          {/* Date cells */}
+          {/* Date cells - FIXED: same width as headers */}
           <div className="grid grid-cols-7 gap-1">
             {heatmapData.map((dayData) => (
               <div
@@ -665,7 +665,7 @@ const HistoryView = ({
                 className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
                   viewMode === "overview" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
                 }`}
-                title="Tổng quan toàn bộ dữ liệu"
+                title="Toàn bộ dữ liệu"
               >
                 <span>🌐</span>
               </button>

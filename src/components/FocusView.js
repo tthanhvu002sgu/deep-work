@@ -10,24 +10,25 @@ const formatTimer = (seconds) => {
   return `${m}:${s}`;
 };
 
-// Create notification sound player using HTML5 Audio
+// FIXED: Tạo Audio instance ngay lập tức để bypass autoplay policy
 const createNotificationSound = () => {
   try {
+    // Tạo audio instance sẵn
+    const audio = new Audio("/noti2.mp3");
+    audio.volume = 0.7;
+    audio.preload = "auto"; // Preload để sẵn sàng phát
+
     const playNotificationSound = async () => {
       try {
-        const audio = new Audio("/noti2.mp3");
-        audio.volume = 0.7;
-
-        const playPromise = new Promise((resolve, reject) => {
-          audio.onended = resolve;
-          audio.onerror = reject;
-          audio.oncanplaythrough = () => {
-            audio.play().catch(reject);
-          };
-        });
-
-        audio.load();
-        await playPromise;
+        // Reset audio về đầu
+        audio.currentTime = 0;
+        
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {
+          await playPromise;
+          console.log("✅ Notification sound played successfully");
+        }
       } catch (error) {
         console.warn(`Failed to play notification sound:`, error);
       }
@@ -108,17 +109,12 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
   const [timeLeft, setTimeLeft] = useState(session.duration);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [isBreakTime, setIsBreakTime] = useState(false);
-  const [breakTimeLeft, setBreakTimeLeft] = useState(300);
   const [showTransition, setShowTransition] = useState(false);
   const [isPlayingSound, setIsPlayingSound] = useState(false);
-  const [actualWorkTime, setActualWorkTime] = useState(null);
 
   // CRITICAL: Timestamp-based tracking for accuracy
   const startTimeRef = useRef(Date.now());
   const targetEndTimeRef = useRef(Date.now() + session.duration * 1000);
-  const breakStartTimeRef = useRef(null);
-  const breakTargetEndTimeRef = useRef(null);
   const pausedAtRef = useRef(null);
   const pausedDurationRef = useRef(0);
 
@@ -127,14 +123,6 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
   const playNotificationRef = useRef(null);
   const cleanupVisibilityListenerRef = useRef(null);
   const isProcessingEndRef = useRef(false);
-
-  const handleSkipTransition = () => {
-    setShowTransition(false);
-    setIsBreakTime(true);
-    setBreakTimeLeft(300);
-    breakStartTimeRef.current = Date.now();
-    breakTargetEndTimeRef.current = Date.now() + 300 * 1000;
-  };
 
   // Initialize notification sound and tab focus management
   useEffect(() => {
@@ -167,16 +155,12 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
       pausedDurationRef.current += pauseDuration;
       
       // Adjust target times to account for pause
-      if (isBreakTime) {
-        breakTargetEndTimeRef.current += pauseDuration;
-      } else {
-        targetEndTimeRef.current += pauseDuration;
-      }
+      targetEndTimeRef.current += pauseDuration;
       
       pausedAtRef.current = null;
       console.log("Timer resumed, pause duration:", Math.round(pauseDuration / 1000), "seconds");
     }
-  }, [isPaused, isBreakTime]);
+  }, [isPaused]);
 
   // FIXED: Timestamp-based timer with accurate time tracking
   useEffect(() => {
@@ -193,7 +177,6 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     }
 
     console.log("Starting timestamp-based timer:", {
-      isBreakTime,
       isFreeMode,
       currentTime: new Date().toLocaleTimeString(),
     });
@@ -202,50 +185,7 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     const updateTimer = () => {
       const now = Date.now();
 
-      if (isBreakTime) {
-        // BREAK TIME - Calculate remaining time based on timestamp
-        const remainingMs = breakTargetEndTimeRef.current - now;
-        const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
-        
-        setBreakTimeLeft(remainingSec);
-
-        // Check if break time completed
-        if (remainingSec <= 0 && !isProcessingEndRef.current) {
-          console.log("Break time completed (timestamp-based)");
-          isProcessingEndRef.current = true;
-
-          // Clear timer immediately
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-
-          // Handle break end
-          setTimeout(() => {
-            const timeToSave =
-              actualWorkTime !== null
-                ? actualWorkTime
-                : isFreeMode
-                ? timeElapsed
-                : session.duration;
-
-            console.log("Saving session after break:", timeToSave);
-
-            TabFocusManager.focusTab();
-
-            if (Notification.permission === "granted") {
-              new Notification("⏰ Hết giờ nghỉ!", {
-                body: "Sẵn sàng cho phiên làm việc tiếp theo?",
-                icon: "/favicon.ico",
-                requireInteraction: true,
-              });
-            }
-
-            onSessionEnd(timeToSave);
-            isProcessingEndRef.current = false;
-          }, 100);
-        }
-      } else if (isFreeMode) {
+      if (isFreeMode) {
         // FREE MODE - Count up based on elapsed time
         const elapsedMs = now - startTimeRef.current - pausedDurationRef.current;
         const elapsedSec = Math.floor(elapsedMs / 1000);
@@ -268,10 +208,9 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
             timerRef.current = null;
           }
 
-          // Show transition and start break
+          // CHANGED: Gọi trực tiếp kết thúc session thay vì break
           setTimeout(() => {
-            showSessionEndNotification();
-            isProcessingEndRef.current = false;
+            handleSessionComplete();
           }, 100);
         }
       }
@@ -292,24 +231,15 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     };
   }, [
     isPaused,
-    isBreakTime,
     isFreeMode,
     showTransition,
-    actualWorkTime,
     timeElapsed,
     session.duration,
-    onSessionEnd,
   ]);
 
-  // Show transition animation and notifications
-  const showSessionEndNotification = async (customWorkTime = null) => {
-    // Prevent re-entry
-    if (showTransition) {
-      console.log("Already in transition, skipping");
-      return;
-    }
-
-    console.log("Showing session end notification");
+  // CHANGED: Xử lý kết thúc session - về trang chủ luôn
+  const handleSessionComplete = async () => {
+    console.log("🎉 Session completed, showing notification and returning home");
 
     // Stop timer
     if (timerRef.current) {
@@ -320,12 +250,9 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     setShowTransition(true);
     setIsPlayingSound(true);
 
-    const workTimeToSave =
-      customWorkTime || (isFreeMode ? timeElapsed : session.duration);
-    setActualWorkTime(workTimeToSave);
+    const workTimeToSave = isFreeMode ? timeElapsed : session.duration;
 
-    console.log("Session end notification:", {
-      customWorkTime,
+    console.log("Session complete:", {
       isFreeMode,
       timeElapsed,
       sessionDuration: session.duration,
@@ -334,9 +261,11 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
 
     TabFocusManager.focusTab();
 
+    // FIXED: Phát âm thanh ngay lập tức
     try {
       if (playNotificationRef.current) {
         await playNotificationRef.current();
+        console.log("✅ Sound played after session complete");
       }
     } catch (error) {
       console.warn("Failed to play notification sounds:", error);
@@ -346,11 +275,10 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
 
     const workTimeInMinutes = Math.round(workTimeToSave / 60);
 
+    // Show notification
     if (Notification.permission === "granted") {
       const notification = new Notification("🎉 Phiên làm việc hoàn thành!", {
-        body: customWorkTime
-          ? `Bạn đã làm việc ${workTimeInMinutes} phút. Thời gian nghỉ ngơi 5 phút bắt đầu`
-          : "Thời gian nghỉ ngơi 5 phút bắt đầu",
+        body: `Bạn đã làm việc ${workTimeInMinutes} phút. Tuyệt vời!`,
         icon: "/favicon.ico",
         requireInteraction: true,
         tag: "session-complete",
@@ -366,12 +294,11 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
       navigator.vibrate([200, 100, 200, 100, 400]);
     }
 
+    // CHANGED: Tự động về trang chủ sau 3 giây
     setTimeout(() => {
-      setShowTransition(false);
-      setIsBreakTime(true);
-      setBreakTimeLeft(300);
-      breakStartTimeRef.current = Date.now();
-      breakTargetEndTimeRef.current = Date.now() + 300 * 1000;
+      TabFocusManager.restoreTitle();
+      onSessionEnd(workTimeToSave);
+      isProcessingEndRef.current = false;
     }, 3000);
   };
 
@@ -401,7 +328,7 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     const elapsedMs = now - startTimeRef.current - pausedDurationRef.current;
     const elapsedSec = Math.floor(elapsedMs / 1000);
     
-    showSessionEndNotification(elapsedSec);
+    handleSessionCompleteWithTime(elapsedSec);
   };
 
   const handleSkipAndSave = () => {
@@ -424,107 +351,79 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     });
 
     isProcessingEndRef.current = true;
-    showSessionEndNotification(calculatedWorkTime);
+    handleSessionCompleteWithTime(calculatedWorkTime);
   };
 
-  const handleSkipBreak = () => {
+  // NEW: Helper để kết thúc với custom time
+  const handleSessionCompleteWithTime = async (customWorkTime) => {
+    console.log("🎉 Session completed with custom time, returning home");
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    TabFocusManager.restoreTitle();
+    setShowTransition(true);
+    setIsPlayingSound(true);
 
-    const timeToSave =
-      actualWorkTime !== null
-        ? actualWorkTime
-        : isFreeMode
-        ? timeElapsed
-        : session.duration;
+    TabFocusManager.focusTab();
 
-    console.log("Skipping break, saving with time:", timeToSave);
-
-    // Visual feedback
-    if (typeof window !== "undefined") {
-      const processingDiv = document.createElement("div");
-      processingDiv.id = "processing-overlay";
-      processingDiv.style.cssText = `
-              position: fixed;
-              top: 0; left: 0; right: 0; bottom: 0;
-              background: rgba(0, 0, 0, 0.1);
-              backdrop-filter: blur(8px);
-              z-index: 9999;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              animation: fadeIn 0.3s ease-out;
-            `;
-      processingDiv.innerHTML = `
-              <div style="
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  gap: 16px;
-                  background: rgba(255, 255, 255, 0.9);
-                  color: #333;
-                  padding: 32px 48px;
-                  border-radius: 24px;
-                  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-              ">
-                  <div style="font-size: 48px; animation: popIn 0.5s ease-out forwards;">✅</div>
-                  <p style="font-weight: 500; font-size: 18px; animation: fadeInText 0.5s 0.2s ease-out forwards; opacity: 0;">
-                      Đã lưu
-                  </p>
-              </div>
-            `;
-      const style = document.createElement("style");
-      style.innerHTML = `
-              @keyframes fadeIn { 
-                  from { opacity: 0; }
-                  to { opacity: 1; }
-              }
-              @keyframes popIn {
-                  from { transform: scale(0.5); opacity: 0; }
-                  to { transform: scale(1); opacity: 1; }
-              }
-              @keyframes fadeInText {
-                  from { opacity: 0; transform: translateY(10px); }
-                  to { opacity: 1; transform: translateY(0); }
-              }
-              @keyframes fadeOut {
-                  from { opacity: 1; }
-                  to { opacity: 0; }
-              }
-            `;
-      document.head.appendChild(style);
-      document.body.appendChild(processingDiv);
-
-      setTimeout(() => {
-        processingDiv.style.animation = "fadeOut 0.3s ease-out forwards";
-        setTimeout(() => {
-          if (document.body.contains(processingDiv)) {
-            document.body.removeChild(processingDiv);
-          }
-          if (document.head.contains(style)) {
-            document.head.removeChild(style);
-          }
-        }, 300);
-      }, 1200);
+    // Phát âm thanh ngay
+    try {
+      if (playNotificationRef.current) {
+        await playNotificationRef.current();
+      }
+    } catch (error) {
+      console.warn("Failed to play notification sounds:", error);
+    } finally {
+      setIsPlayingSound(false);
     }
 
+    const workTimeInMinutes = Math.round(customWorkTime / 60);
+
+    if (Notification.permission === "granted") {
+      new Notification("🎉 Phiên làm việc hoàn thành!", {
+        body: `Bạn đã làm việc ${workTimeInMinutes} phút. Tuyệt vời!`,
+        icon: "/favicon.ico",
+        requireInteraction: true,
+      });
+    }
+
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200, 100, 400]);
+    }
+
+    // Visual feedback
+    const processingDiv = document.createElement("div");
+    processingDiv.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.1); backdrop-filter: blur(8px); z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      animation: fadeIn 0.3s ease-out;
+    `;
+    processingDiv.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;
+        background: rgba(255, 255, 255, 0.9); color: #333; padding: 32px 48px;
+        border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <div style="font-size: 48px; animation: popIn 0.5s ease-out forwards;">✅</div>
+        <p style="font-weight: 500; font-size: 18px;">Đã lưu</p>
+      </div>
+    `;
+    document.body.appendChild(processingDiv);
+
     setTimeout(() => {
-      onSessionEnd(timeToSave);
-    }, 100);
+      if (document.body.contains(processingDiv)) {
+        document.body.removeChild(processingDiv);
+      }
+      TabFocusManager.restoreTitle();
+      onSessionEnd(customWorkTime);
+      isProcessingEndRef.current = false;
+    }, 1500);
   };
 
   // Transition screen
   if (showTransition) {
-    const displayTime =
-      actualWorkTime !== null
-        ? actualWorkTime
-        : isFreeMode
-        ? timeElapsed
-        : session.duration;
+    const displayTime = isFreeMode ? timeElapsed : session.duration;
 
     return (
       <div className="flex flex-col items-center justify-center w-full h-full bg-slate-900 text-white p-6 relative overflow-hidden">
@@ -560,64 +459,25 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
             </div>
           </div>
 
-          <p className="text-md text-slate-400 mb-8">
-            Chuẩn bị nghỉ ngơi 5 phút...
+          <p className="text-md text-slate-400">
+            Đang quay về trang chủ...
           </p>
-
-          <button
-            onClick={handleSkipTransition}
-            className="flex items-center space-x-2 px-6 py-3 bg-slate-800 text-slate-300 font-semibold rounded-lg hover:bg-slate-700 transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isPlayingSound}
-          >
-            {!isPlayingSound && (
-              <>
-                <span className="text-lg">⏭️</span>
-                <span>Bỏ qua</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     );
   }
 
-  const progress = isBreakTime
-    ? ((300 - breakTimeLeft) / 300) * 100
-    : isFreeMode
+  const progress = isFreeMode
     ? Math.min((timeElapsed / 1800) * 100, 100)
     : ((session.duration - timeLeft) / session.duration) * 100;
 
-  const currentTime = isBreakTime
-    ? breakTimeLeft
-    : isFreeMode
-    ? timeElapsed
-    : timeLeft;
+  const currentTime = isFreeMode ? timeElapsed : timeLeft;
 
-  const bgColor = isBreakTime
-    ? "bg-green-900"
-    : isFreeMode
-    ? "bg-purple-900"
-    : "bg-slate-900";
-  const progressColor = isBreakTime
-    ? "bg-green-400"
-    : isFreeMode
-    ? "bg-purple-400"
-    : "bg-blue-500";
-  const progressBg = isBreakTime
-    ? "bg-green-700"
-    : isFreeMode
-    ? "bg-purple-700"
-    : "bg-slate-700";
-  const buttonBg = isBreakTime
-    ? "bg-green-800"
-    : isFreeMode
-    ? "bg-purple-800"
-    : "bg-slate-800";
-  const textColor = isBreakTime
-    ? "text-green-300"
-    : isFreeMode
-    ? "text-purple-300"
-    : "text-slate-300";
+  const bgColor = isFreeMode ? "bg-purple-900" : "bg-slate-900";
+  const progressColor = isFreeMode ? "bg-purple-400" : "bg-blue-500";
+  const progressBg = isFreeMode ? "bg-purple-700" : "bg-slate-700";
+  const buttonBg = isFreeMode ? "bg-purple-800" : "bg-slate-800";
+  const textColor = isFreeMode ? "text-purple-300" : "text-slate-300";
 
   return (
     <div
@@ -634,72 +494,38 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
       </div>
 
       {/* Background particles */}
-      {!isBreakTime && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-          <div
-            className="absolute top-1/4 left-1/4 w-1 h-1 bg-blue-400 rounded-full animate-ping"
-            style={{ animationDelay: "0s", animationDuration: "3s" }}
-          ></div>
-          <div
-            className="absolute top-3/4 right-1/3 w-1 h-1 bg-purple-400 rounded-full animate-ping"
-            style={{ animationDelay: "1s", animationDuration: "4s" }}
-          ></div>
-          <div
-            className="absolute top-1/3 right-1/4 w-1 h-1 bg-blue-300 rounded-full animate-ping"
-            style={{ animationDelay: "2s", animationDuration: "5s" }}
-          ></div>
-        </div>
-      )}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div
+          className="absolute top-1/4 left-1/4 w-1 h-1 bg-blue-400 rounded-full animate-ping"
+          style={{ animationDelay: "0s", animationDuration: "3s" }}
+        ></div>
+        <div
+          className="absolute top-3/4 right-1/3 w-1 h-1 bg-purple-400 rounded-full animate-ping"
+          style={{ animationDelay: "1s", animationDuration: "4s" }}
+        ></div>
+        <div
+          className="absolute top-1/3 right-1/4 w-1 h-1 bg-blue-300 rounded-full animate-ping"
+          style={{ animationDelay: "2s", animationDuration: "5s" }}
+        ></div>
+      </div>
 
-      {isBreakTime ? (
-        <>
-          <div
-            className="text-8xl mb-6 animate-bounce"
-            style={{ animationDuration: "2s" }}
-          >
-            ☕
-          </div>
-          <p
-            className={`text-xl font-semibold ${textColor} mb-4 text-center animate-pulse`}
-          >
-            Thời gian nghỉ ngơi
-          </p>
-          <div className="relative">
-            <h2 className="text-8xl font-extrabold tracking-tighter mb-8 relative z-10">
-              {formatTimer(currentTime)}
-            </h2>
-            <div className="absolute inset-0 text-8xl font-extrabold tracking-tighter opacity-20 blur-sm">
-              {formatTimer(currentTime)}
-            </div>
-          </div>
-          <p
-            className={`${textColor} text-center mb-12 max-w-md animate-fade-in-out`}
-          >
-            Hãy thư giãn, uống nước, hoặc làm các bài tập nhẹ nhàng để phục hồi
-            năng lượng
-          </p>
-        </>
-      ) : (
-        <>
-          {isFreeMode && <div className="text-6xl mb-4 animate-bounce">⏱️</div>}
-          <p className={`text-xl font-semibold ${textColor} mb-4 text-center`}>
-            {session.task.name}
-            {isFreeMode && (
-              <span className="block text-sm mt-1 animate-pulse">
-                Chế độ tự do
-              </span>
-            )}
-          </p>
-          <div className="relative">
-            <h2 className="text-8xl font-extrabold tracking-tighter relative z-10">
-              {formatTimer(currentTime)}
-            </h2>
-            <div className="absolute inset-0 text-8xl font-extrabold tracking-tighter opacity-10 blur-sm">
-              {formatTimer(currentTime)}
-            </div>
-          </div>
-        </>
-      )}
+      {isFreeMode && <div className="text-6xl mb-4 animate-bounce">⏱️</div>}
+      <p className={`text-xl font-semibold ${textColor} mb-4 text-center`}>
+        {session.task.name}
+        {isFreeMode && (
+          <span className="block text-sm mt-1 animate-pulse">
+            Chế độ tự do
+          </span>
+        )}
+      </p>
+      <div className="relative">
+        <h2 className="text-8xl font-extrabold tracking-tighter relative z-10">
+          {formatTimer(currentTime)}
+        </h2>
+        <div className="absolute inset-0 text-8xl font-extrabold tracking-tighter opacity-10 blur-sm">
+          {formatTimer(currentTime)}
+        </div>
+      </div>
 
       {/* Control buttons */}
       <div className="fixed bottom-10 flex space-x-6">
@@ -711,14 +537,7 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
           {isPaused ? "▶️ Tiếp tục" : "⏸️ Tạm dừng"}
         </button>
 
-        {isBreakTime ? (
-          <button
-            onClick={handleSkipBreak}
-            className={`text-slate-400 font-semibold py-3 px-6 rounded-lg ${buttonBg} hover:opacity-80 transition-all duration-300 transform hover:scale-105 shadow-lg backdrop-blur-sm`}
-          >
-            ⏭️ Bỏ qua nghỉ
-          </button>
-        ) : isFreeMode ? (
+        {isFreeMode ? (
           <button
             onClick={handleFinishFreeMode}
             className={`text-slate-400 font-semibold py-3 px-6 rounded-lg ${buttonBg} hover:opacity-80 transition-all duration-300 transform hover:scale-105 shadow-lg backdrop-blur-sm`}

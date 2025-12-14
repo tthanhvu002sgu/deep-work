@@ -13,6 +13,10 @@ import {
   DailyTargetModal,
   LoadingModal,
   ErrorModal,
+  EditTaskModal, // NEW
+  ConfirmArchiveModal, // NEW
+  ArchivedTasksModal, // NEW,
+  DailySummaryModal
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
 import fileStorageService from "./services/fileStorageService";
@@ -28,11 +32,21 @@ const App = () => {
   const [modal, setModal] = useState(null);
   const [taskToStart, setTaskToStart] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  
+  // NEW: States for edit and archive
+  const [taskToEdit, setTaskToEdit] = useState(null);
+  const [taskToArchive, setTaskToArchive] = useState(null);
+  const [archivedTasks, setArchivedTasks] = useState([]);
+  const [showArchivedTasks, setShowArchivedTasks] = useState(false);
+
   const [filter, setFilter] = useState("day");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentDateKey, setCurrentDateKey] = useState(
     new Date().toDateString()
   );
+  
+  // NEW: Daily summary state
+  const [dailySummaryDate, setDailySummaryDate] = useState(null);
 
   // FIX: Add effect to detect when a new day starts
   useEffect(() => {
@@ -52,20 +66,23 @@ const App = () => {
     const loadApp = async () => {
       setLoading(true);
       try {
-        const [tasksData, sessionsData, targetData] = await Promise.all([
+        const [tasksData, sessionsData, targetData, archivedData] = await Promise.all([
           fileStorageService.getTasks(),
           fileStorageService.getSessions(),
           fileStorageService.getDailyTarget(),
+          fileStorageService.getArchivedTasks(), // NEW
         ]);
 
         setTasks(tasksData);
         setSessions(sessionsData);
         setDailyTarget(targetData.targetMinutes * 60);
+        setArchivedTasks(archivedData); // NEW
 
         console.log('Initial data loaded:', {
           tasks: tasksData.length,
           sessions: sessionsData.length,
-          target: targetData.targetMinutes
+          target: targetData.targetMinutes,
+          archived: archivedData.length, // NEW
         });
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -296,6 +313,12 @@ const App = () => {
     setModal("confirmDelete");
   }, []);
 
+  // NEW: Add missing handleCancelDelete
+  const handleCancelDelete = useCallback(() => {
+    setModal(null);
+    setTaskToDelete(null);
+  }, []);
+
   const handleConfirmDelete = useCallback(async () => {
     if (!taskToDelete) return;
 
@@ -307,11 +330,6 @@ const App = () => {
       setModal("error");
     }
   }, [taskToDelete, deleteTask]);
-
-  const handleCancelDelete = useCallback(() => {
-    setModal(null);
-    setTaskToDelete(null);
-  }, []);
 
   const handleSetDailyTarget = useCallback(async (targetMinutes) => {
     setLoading(true);
@@ -397,6 +415,121 @@ const App = () => {
     [addTask]
   );
 
+  // NEW: Check for daily summary popup
+  useEffect(() => {
+    const checkDailySummary = () => {
+      const now = new Date();
+      const lastShownKey = 'deepwork_last_summary_shown';
+      const lastShown = localStorage.getItem(lastShownKey);
+      const todayKey = now.toISOString().split('T')[0];
+      
+      // Check if it's 11 PM or later (23:00)
+      const isAfter11PM = now.getHours() >= 23;
+      
+      // Or if it's a new day and we haven't shown summary for yesterday
+      const isNewDay = lastShown !== todayKey;
+      
+      if ((isAfter11PM || isNewDay) && lastShown !== todayKey) {
+        // Get yesterday's date if it's a new day, or today if it's 11 PM
+        const summaryDate = isNewDay && now.getHours() < 23
+          ? new Date(now.getTime() - 24 * 60 * 60 * 1000) // Yesterday
+          : now; // Today
+        
+        const summaryDateKey = summaryDate.toISOString().split('T')[0];
+        
+        // Check if there are any sessions for that day
+        const daySessions = sessions.filter(s => {
+          const sessionDate = new Date(s.completedAt).toISOString().split('T')[0];
+          return sessionDate === summaryDateKey;
+        });
+        
+        // Show summary even if no sessions (to encourage user)
+        setDailySummaryDate(summaryDateKey);
+        setModal('dailySummary');
+        localStorage.setItem(lastShownKey, todayKey);
+      }
+    };
+
+    // Check immediately on mount
+    checkDailySummary();
+
+    // Check every 10 minutes
+    const interval = setInterval(checkDailySummary, 10 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [sessions]);
+
+  const handleCloseDailySummary = useCallback(() => {
+    setModal(null);
+    setDailySummaryDate(null);
+  }, []);
+
+  // NEW: Handle edit task
+  const handleEditTask = useCallback((task) => {
+    setTaskToEdit(task);
+    setModal("editTask");
+  }, []);
+
+  const handleSaveTaskEdit = useCallback(async (taskId, updates) => {
+    try {
+      const updatedTask = await fileStorageService.updateTask(taskId, updates);
+      setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+      setModal(null);
+      setTaskToEdit(null);
+      console.log("✅ Task updated successfully");
+    } catch (error) {
+      console.error("Error updating task:", error);
+      setError("Không thể cập nhật task: " + error.message);
+      setModal("error");
+    }
+  }, []);
+
+  // NEW: Handle archive task
+  const handleArchiveTask = useCallback((task) => {
+    setTaskToArchive(task);
+    setModal("confirmArchive");
+  }, []);
+
+  const handleConfirmArchive = useCallback(async () => {
+    if (!taskToArchive) return;
+
+    try {
+      const updatedTask = await fileStorageService.toggleTaskArchive(taskToArchive.id);
+      
+      if (updatedTask.isArchived) {
+        // Move to archived
+        setTasks(prev => prev.filter(t => t.id !== taskToArchive.id));
+        setArchivedTasks(prev => [...prev, updatedTask]);
+      } else {
+        // Restore from archived
+        setArchivedTasks(prev => prev.filter(t => t.id !== taskToArchive.id));
+        setTasks(prev => [...prev, updatedTask]);
+      }
+
+      setModal(null);
+      setTaskToArchive(null);
+      console.log("✅ Task archive status toggled");
+    } catch (error) {
+      console.error("Error archiving task:", error);
+      setError("Không thể ẩn/hiện task: " + error.message);
+      setModal("error");
+    }
+  }, [taskToArchive]);
+
+  const handleCancelArchive = useCallback(() => {
+    setModal(null);
+    setTaskToArchive(null);
+  }, []);
+
+  // NEW: Handle show archived tasks
+  const handleShowArchivedTasks = useCallback(() => {
+    setShowArchivedTasks(true);
+  }, []);
+
+  const handleCloseArchivedTasks = useCallback(() => {
+    setShowArchivedTasks(false);
+  }, []);
+
   return (
     <div className="h-screen w-screen bg-slate-100 text-slate-800 antialiased overflow-hidden flex flex-col">
       {!activeSession ? (
@@ -427,7 +560,6 @@ const App = () => {
               filter={filter}
               setFilter={setFilter}
               dailyTargets={{}}
-              // NEW: pass all sessions for overview
               allSessions={sessions}
             />
             <TaskList
@@ -436,12 +568,29 @@ const App = () => {
                 setTaskToStart(task);
                 setModal("startTask");
               }}
+              onTaskEdit={handleEditTask} // NEW
+              onTaskArchive={handleArchiveTask} // NEW
               onTaskDelete={handleDeleteTask}
             />
           </div>
 
           {/* Floating Action Buttons */}
           <div className="fixed bottom-6 right-6 flex flex-col space-y-3 z-20">
+            {/* NEW: Archived Tasks Button */}
+            {archivedTasks.length > 0 && (
+              <button
+                onClick={handleShowArchivedTasks}
+                className="bg-orange-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-orange-700 transition transform hover:scale-110 relative"
+                aria-label="Xem tasks đã ẩn"
+                title="Tasks đã ẩn"
+              >
+                📦
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {archivedTasks.length}
+                </span>
+              </button>
+            )}
+
             <button
               onClick={() => setModal("fileManager")}
               className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-green-700 transition transform hover:scale-110"
@@ -510,6 +659,45 @@ const App = () => {
         />
       )}
 
+      {/* NEW: Edit Task Modal */}
+      {modal === "editTask" && taskToEdit && (
+        <EditTaskModal
+          task={taskToEdit}
+          onClose={() => {
+            setModal(null);
+            setTaskToEdit(null);
+          }}
+          onSave={handleSaveTaskEdit}
+        />
+      )}
+
+      {/* NEW: Confirm Archive Modal */}
+      {modal === "confirmArchive" && taskToArchive && (
+        <ConfirmArchiveModal
+          task={taskToArchive}
+          onConfirm={handleConfirmArchive}
+          onCancel={handleCancelArchive}
+        />
+      )}
+
+      {/* NEW: Archived Tasks Modal */}
+      {showArchivedTasks && (
+        <ArchivedTasksModal
+          tasks={archivedTasks}
+          onClose={handleCloseArchivedTasks}
+          onUnarchive={(task) => {
+            setTaskToArchive(task);
+            setModal("confirmArchive");
+            setShowArchivedTasks(false);
+          }}
+          onDelete={(task) => {
+            setTaskToDelete(task);
+            setModal("confirmDelete");
+            setShowArchivedTasks(false);
+          }}
+        />
+      )}
+
       {modal === "dailyTarget" && (
         <DailyTargetModal
           currentTarget={Math.round(dailyTarget / 60)}
@@ -537,6 +725,18 @@ const App = () => {
           task={taskToDelete}
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
+        />
+      )}
+
+      {modal === "dailySummary" && dailySummaryDate && (
+        <DailySummaryModal
+          date={dailySummaryDate}
+          sessions={sessions.filter(s => 
+            new Date(s.completedAt).toISOString().split('T')[0] === dailySummaryDate
+          )}
+          tasks={tasks}
+          dailyTarget={Math.round(dailyTarget / 60)} // Convert to minutes
+          onClose={handleCloseDailySummary}
         />
       )}
     </div>

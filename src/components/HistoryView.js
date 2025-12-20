@@ -31,80 +31,55 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
 
     // Generate date range based on filter
     if (filter === "week") {
-      // FIX: Start week from Monday instead of Sunday
       const today = new Date(now);
-      const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      
-      // Calculate the start of the week (Monday)
-      const startOfWeek = new Date(today);
-      // If today is Sunday (0), go back 6 days. Otherwise, go back (currentDay - 1) days.
-      const daysToSubtract = currentDay === 0 ? 6 : currentDay - 1;
-      startOfWeek.setDate(today.getDate() - daysToSubtract);
-      startOfWeek.setHours(0, 0, 0, 0);
-      
-      // Generate 7 days from Monday
+      const currentDay = today.getDay();
+      const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + mondayOffset);
+      monday.setHours(0, 0, 0, 0);
+
       for (let i = 0; i < 7; i++) {
-        const date = new Date(startOfWeek);
-        date.setDate(startOfWeek.getDate() + i);
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + i);
         dates.push(date);
       }
     } else if (filter === "month") {
-      // Get all days in current month
-      const year = now.getFullYear();
-      const month = now.getMonth();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-      for (let day = 1; day <= daysInMonth; day++) {
-        dates.push(new Date(year, month, day));
+      for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
       }
     }
 
-    // Calculate focus time for each date
     return dates.map((date) => {
       const dateKey = date.toISOString().split("T")[0];
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
-
-      // Get sessions for this date
-      const daySessions = sessions.filter((session) => {
-        const sessionDate = new Date(session.completedAt);
-        return sessionDate >= dayStart && sessionDate <= dayEnd;
+      const daySessions = sessions.filter((s) => {
+        const sessionDate = new Date(s.completedAt).toISOString().split("T")[0];
+        return sessionDate === dateKey;
       });
 
-      const totalMinutes =
-        daySessions.reduce((acc, session) => acc + session.duration, 0) / 60;
+      const totalMinutes = daySessions.reduce((acc, s) => acc + s.duration / 60, 0);
       const totalHours = totalMinutes / 60;
+
       const target = dailyTargets[dateKey];
-      const targetMinutes = target?.targetMinutes || 0;
+      const targetMinutes = target || 0;
       const targetHours = targetMinutes / 60;
 
-      // Determine color based on conditions
-      let color = "bg-gray-100"; // Default: no activity
       let intensity = 0;
+      let hasActivity = totalMinutes > 0;
 
       if (target && targetMinutes > 0) {
-        // Has target set
         if (totalMinutes >= targetMinutes) {
-          // Target completed - green
-          color = "bg-green-500";
-          intensity = Math.min(totalHours / targetHours, 2); // Max intensity at 2x target
+          intensity = Math.min(totalHours / targetHours, 2);
         } else {
-          // Target not completed - red
-          color = "bg-red-500";
-          intensity = Math.max(0.3, totalMinutes / targetMinutes); // Min 30% intensity
+          intensity = Math.max(0.3, totalMinutes / targetMinutes);
         }
       } else {
-        // No target set
         if (totalHours >= 1) {
-          // >= 1h without target - blue
-          color = "bg-blue-500";
-          intensity = Math.min(totalHours / 3, 1); // Max intensity at 3h
+          intensity = Math.min(totalHours / 3, 1);
         } else if (totalMinutes > 0) {
-          // < 1h without target - orange-red
-          color = "bg-orange-600";
-          intensity = Math.max(0.2, totalMinutes / 60); // Min 20% intensity
+          intensity = Math.max(0.2, totalMinutes / 60);
         }
       }
 
@@ -116,7 +91,7 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
         sessionCount: daySessions.length,
         target: targetMinutes,
         targetAchieved: targetMinutes > 0 && totalMinutes >= targetMinutes,
-        color,
+        hasActivity,
         intensity: Math.max(0.2, Math.min(intensity, 1)),
         tasks: [...new Set(daySessions.map((s) => s.taskId))].map(
           (taskId) => tasks.find((t) => t.id === taskId)?.name || "Task đã xóa"
@@ -125,14 +100,13 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
     });
   }, [sessions, tasks, filter, dailyTargets]);
 
-  // NEW: Calculate working days stats
+  // Calculate working days stats
   const { workingDays, totalDays, streak } = useMemo(() => {
     let consecutiveDays = 0;
     let maxStreak = 0;
     let currentStreak = 0;
     const workingDaysCount = heatmapData.filter(day => day.totalMinutes > 0).length;
 
-    // Calculate streak
     for (let i = 0; i < heatmapData.length; i++) {
       if (heatmapData[i].totalMinutes > 0) {
         currentStreak++;
@@ -141,7 +115,7 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
         currentStreak = 0;
       }
     }
-    maxStreak = Math.max(maxStreak, currentStreak); // Check streak at the end
+    maxStreak = Math.max(maxStreak, currentStreak);
 
     return {
       workingDays: workingDaysCount,
@@ -181,57 +155,65 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
     return `${minutes}p`;
   };
 
+  // Simple wireframe heatmap cell style
+  const getCellStyle = (dayData) => {
+    if (!dayData.hasActivity) {
+      return "bg-white border-2 border-gray-300";
+    }
+    
+    // Đơn giản: chỉ dùng màu xám đậm nhạt theo mức độ
+    if (dayData.intensity > 0.7) {
+      return "bg-gray-900 border-2 border-black";
+    } else if (dayData.intensity > 0.4) {
+      return "bg-gray-600 border-2 border-black";
+    } else {
+      return "bg-gray-300 border-2 border-black";
+    }
+  };
+
+  const getCellBackground = (dayData) => {
+    // Không cần background pattern phức tạp nữa
+    return {};
+  };
+
   return (
     <>
-      {/* Legend */}
+      {/* Legend - Wireframe Style */}
       <div className="flex items-center space-x-4 mb-4 text-xs">
-        {/* <span className="text-gray-600">Ít</span>
+        <span className="text-gray-600">Ít</span>
         <div className="flex space-x-1">
-          <div className="w-3 h-3 bg-gray-100 rounded border"></div>
-          <div className="w-3 h-3 bg-orange-600 opacity-30 rounded"></div>
-          <div className="w-3 h-3 bg-blue-500 opacity-50 rounded"></div>
-          <div className="w-3 h-3 bg-green-500 opacity-70 rounded"></div>
-          <div className="w-3 h-3 bg-green-500 rounded"></div>
-          <div className="w-3 h-3 bg-red-500 rounded"></div>
+          <div className="w-4 h-4 bg-white border-2 border-gray-300 rounded"></div>
+          <div className="w-4 h-4 border-2 border-black rounded" style={{
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 7px, #1a1a1a 7px, #1a1a1a 8px)'
+          }}></div>
+          <div className="w-4 h-4 border-2 border-black rounded" style={{
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 5px, #1a1a1a 5px, #1a1a1a 6px)'
+          }}></div>
+          <div className="w-4 h-4 border-2 border-black rounded" style={{
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 3px, #1a1a1a 3px, #1a1a1a 4px)'
+          }}></div>
+          <div className="w-4 h-4 bg-black border-2 border-black rounded"></div>
         </div>
         <span className="text-gray-600">Nhiều</span>
-        <div className="flex items-center space-x-2 ml-4 text-xs">
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-green-500 rounded"></div>
-            <span>Đạt mục tiêu</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-red-500 rounded"></div>
-            <span>Chưa đạt mục tiêu</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-blue-500 rounded"></div>
-            <span>Không mục tiêu ≥1h</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-2 h-2 bg-orange-600 rounded"></div>
-            <span>Không mục tiêu {"<"}1h</span>
-          </div>
-        </div> */}
       </div>
 
-      {/* NEW: Stats for working days */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6 text-sm text-gray-700 p-3 bg-gray-50 rounded-lg border">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6 text-sm p-3 border-2 border-black rounded-lg bg-white">
         <div className="text-center">
           <div className="text-xs text-gray-500 uppercase">Ngày làm việc</div>
-          <div className="font-bold text-lg text-green-600">
+          <div className="font-bold text-lg text-gray-900">
             {workingDays} <span className="text-gray-500 font-medium">/ {totalDays}</span>
           </div>
         </div>
-        <div className="text-center">
+        <div className="text-center border-l-2 border-r-2 border-black">
           <div className="text-xs text-gray-500 uppercase">Ngày nghỉ</div>
-          <div className="font-bold text-lg text-blue-600">
+          <div className="font-bold text-lg text-gray-900">
             {totalDays - workingDays}
           </div>
         </div>
-        <div className="text-center col-span-2 sm:col-span-1">
+        <div className="text-center">
           <div className="text-xs text-gray-500 uppercase">Chuỗi dài nhất</div>
-          <div className="font-bold text-lg text-orange-600">
+          <div className="font-bold text-lg text-gray-900">
             {streak} ngày
           </div>
         </div>
@@ -239,11 +221,8 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
 
       {/* Heatmap Grid */}
       {filter === "week" ? (
-        // Week layout - vertical structure
         <div className="space-y-2">
-          {/* Day headers */}
           <div className="grid grid-cols-7 gap-1">
-            {/* FIX: Change order to Monday -> Sunday */}
             {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((day) => (
               <div
                 key={day}
@@ -254,71 +233,55 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
             ))}
           </div>
           
-          {/* Date cells - FIXED: same width as headers */}
           <div className="grid grid-cols-7 gap-1">
             {heatmapData.map((dayData) => (
               <div
                 key={dayData.dateKey}
-                className={`
-                  w-8 h-8 rounded cursor-pointer border border-gray-200
-                  ${dayData.color} hover:ring-2 hover:ring-gray-400 transition-all
-                  flex items-center justify-center text-xs font-medium
-                `}
-                style={{
-                  opacity: dayData.totalMinutes > 0 ? dayData.intensity : 0.1,
-                  color: dayData.totalMinutes > 0 ? "white" : "#6b7280",
-                }}
+                className={`w-8 h-8 rounded cursor-pointer ${getCellStyle(dayData)} hover:ring-2 hover:ring-gray-400 transition-all flex items-center justify-center text-xs font-medium`}
+                style={getCellBackground(dayData)}
                 onMouseEnter={(e) => handleMouseEnter(dayData, e)}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
-                title={`${formatDate(dayData.date)}: ${formatTime(
-                  dayData.totalMinutes
-                )}`}
+                title={`${formatDate(dayData.date)}: ${formatTime(dayData.totalMinutes)}`}
               >
-                {dayData.date.getDate()}
+                <span className={dayData.hasActivity ? "text-white mix-blend-difference" : "text-gray-500"}>
+                  {dayData.date.getDate()}
+                </span>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        // Month layout - flexible grid
         <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-12 xl:grid-cols-15 gap-1">
           {heatmapData.map((dayData) => (
             <div
               key={dayData.dateKey}
-              className={`
-                w-6 h-6 rounded cursor-pointer border border-gray-200
-                ${dayData.color} hover:ring-2 hover:ring-gray-400 transition-all
-                flex items-center justify-center text-xs font-medium
-              `}
-              style={{
-                opacity: dayData.totalMinutes > 0 ? dayData.intensity : 0.1,
-                color: dayData.totalMinutes > 0 ? "white" : "#6b7280",
-              }}
+              className={`w-6 h-6 rounded cursor-pointer ${getCellStyle(dayData)} hover:ring-2 hover:ring-gray-400 transition-all flex items-center justify-center text-xs font-medium`}
+              style={getCellBackground(dayData)}
               onMouseEnter={(e) => handleMouseEnter(dayData, e)}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
-              title={`${formatDate(dayData.date)}: ${formatTime(
-                dayData.totalMinutes
-              )}`}
+              title={`${formatDate(dayData.date)}: ${formatTime(dayData.totalMinutes)}`}
             >
-              {dayData.date.getDate()}
+              <span className={dayData.hasActivity ? "text-white mix-blend-difference" : "text-gray-500"} style={{ fontSize: '10px' }}>
+                {dayData.date.getDate()}
+              </span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tooltip */}
+      {/* Tooltip - Wireframe Style */}
       {hoveredDate && (
         <div
-          className="fixed z-50 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-lg pointer-events-none max-w-xs"
+          className="fixed z-50 bg-white text-gray-900 text-xs rounded-lg p-3 pointer-events-none max-w-xs border-2 border-black"
           style={{
             left: tooltipPosition.x + 10,
             top: tooltipPosition.y - 10,
             transform: "translateY(-100%)",
           }}
         >
-          <div className="font-semibold mb-1">
+          <div className="font-semibold mb-1 border-b border-gray-300 pb-1">
             {hoveredDate.date.toLocaleDateString("vi-VN", {
               weekday: "long",
               day: "numeric",
@@ -326,10 +289,10 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
             })}
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 mt-2">
             <div>
-              ⏱️ Thời gian tập trung:{" "}
-              <span className="font-semibold text-blue-300">
+              ⏱️ Thời gian:{" "}
+              <span className="font-semibold">
                 {formatTime(hoveredDate.totalMinutes)}
               </span>
             </div>
@@ -345,13 +308,7 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
                 <span className="font-semibold">
                   {formatTime(hoveredDate.target)}
                 </span>
-                <span
-                  className={`ml-1 ${
-                    hoveredDate.targetAchieved
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }`}
-                >
+                <span className={`ml-1 ${hoveredDate.targetAchieved ? "text-gray-900" : "text-gray-500"}`}>
                   {hoveredDate.targetAchieved ? "✅ Đạt" : "❌ Chưa đạt"}
                 </span>
               </div>
@@ -362,10 +319,9 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
             {hoveredDate.tasks.length > 0 && (
               <div>
                 📝 Tasks:{" "}
-                <span className="text-green-300">
+                <span className="text-gray-700">
                   {hoveredDate.tasks.slice(0, 2).join(", ")}
-                  {hoveredDate.tasks.length > 2 &&
-                    ` +${hoveredDate.tasks.length - 2} khác`}
+                  {hoveredDate.tasks.length > 2 && ` +${hoveredDate.tasks.length - 2} khác`}
                 </span>
               </div>
             )}
@@ -382,20 +338,17 @@ const HistoryView = ({
   filter,
   setFilter,
   dailyTargets = {},
-  // NEW: all sessions for global overview
   allSessions = [],
 }) => {
-  // State for view mode toggle
-  const [viewMode, setViewMode] = useState("chart"); // "chart" or "heatmap" or "overview"
+  const [viewMode, setViewMode] = useState("chart");
 
-  // Auto-reset to chart mode when switching to day filter (heatmap not available for day)
   React.useEffect(() => {
     if (filter === "day" && viewMode === "heatmap") {
       setViewMode("chart");
     }
   }, [filter, viewMode]);
 
-  // Chart data logic
+  // Chart data with simple wireframe styling
   const chartData = React.useMemo(() => {
     const dataByTask = sessions.reduce((acc, session) => {
       const taskId = session.taskId;
@@ -411,7 +364,6 @@ const HistoryView = ({
     const labels = Object.keys(dataByTask).map(
       (taskId) => taskMap[taskId] || "Task đã xóa"
     );
-    // CONVERT to hours with one decimal place
     const data = Object.values(dataByTask).map((totalSeconds) =>
       Math.round((totalSeconds / 3600) * 10) / 10
     );
@@ -422,10 +374,10 @@ const HistoryView = ({
         {
           label: "Thời gian tập trung (giờ)",
           data,
-          backgroundColor: "rgba(59, 130, 246, 0.8)",
-          borderColor: "rgba(59, 130, 246, 1)",
-          borderWidth: 1,
-          borderRadius: 4,
+          backgroundColor: "#ffffff", // Nền trắng đơn giản
+          borderColor: "#1a1a1a",     // Viền đen
+          borderWidth: 2,
+          borderRadius: 0,
           borderSkipped: false,
         },
       ],
@@ -444,9 +396,15 @@ const HistoryView = ({
         display: false,
       },
       tooltip: {
+        backgroundColor: '#ffffff',
+        titleColor: '#1a1a1a',
+        bodyColor: '#1a1a1a',
+        borderColor: '#1a1a1a',
+        borderWidth: 2,
+        cornerRadius: 0,
+        displayColors: false,
         callbacks: {
           label: function (context) {
-            // UPDATE tooltip to show hours
             return `${context.parsed.x} giờ`;
           },
         },
@@ -456,31 +414,46 @@ const HistoryView = ({
       x: {
         beginAtZero: true,
         ticks: {
+          color: '#1a1a1a',
+          font: {
+            size: 12,
+            weight: 'bold'
+          },
           callback: function (value) {
-            // UPDATE axis ticks to show 'h' for hours
             return value + "h";
           },
         },
         grid: {
-          color: "rgba(0, 0, 0, 0.1)",
+          color: "#e5e5e5",
+          lineWidth: 1,
+        },
+        border: {
+          color: "#1a1a1a",
+          width: 2,
         },
       },
       y: {
         ticks: {
+          color: '#1a1a1a',
           maxRotation: 0,
           minRotation: 0,
           font: {
             size: 12,
+            weight: 'bold'
           },
         },
         grid: {
           display: false,
         },
+        border: {
+          color: "#1a1a1a",
+          width: 2,
+        },
       },
     },
     elements: {
       bar: {
-        borderWidth: 1,
+        borderWidth: 2,
       },
     },
   };
@@ -492,13 +465,10 @@ const HistoryView = ({
     return "";
   };
 
-  // Calculate total focus time for current filter
-  const totalMinutes =
-    sessions.reduce((acc, session) => acc + session.duration, 0) / 60;
+  const totalMinutes = sessions.reduce((acc, session) => acc + session.duration, 0) / 60;
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMinutes = Math.round(totalMinutes % 60);
 
-  // NEW: Calculate number of unique days with sessions for average calculation
   const numberOfDaysWithSessions = useMemo(() => {
     if (sessions.length === 0) return 0;
     return new Set(
@@ -513,92 +483,84 @@ const HistoryView = ({
     return `${Math.round(totalMinutes)} phút`;
   };
 
-  // NEW: Global Overview stats (computed from allSessions)
+  // Overview stats
   const overview = useMemo(() => {
     if (!allSessions || allSessions.length === 0) {
       return null;
     }
 
-    // Basic aggregates
     const totalSecondsAll = allSessions.reduce((acc, s) => acc + (s.duration || 0), 0);
     const totalMinutesAll = Math.round(totalSecondsAll / 60);
+    const totalHoursAll = Math.floor(totalMinutesAll / 60);
+    const remainingMinutesAll = totalMinutesAll % 60;
 
-    // Unique active days
     const dayKey = (d) => new Date(d).toISOString().split("T")[0];
     const activeDayKeys = Array.from(new Set(allSessions.map(s => dayKey(s.completedAt)))).sort();
 
-    // Range
     const firstDay = activeDayKeys[0];
     const lastDay = activeDayKeys[activeDayKeys.length - 1];
+    
+    const calendarDays = firstDay && lastDay 
+      ? Math.ceil((new Date(lastDay) - new Date(firstDay)) / (1000 * 60 * 60 * 24)) + 1 
+      : 0;
 
-    // Longest streak overall
+    // Longest streak
     let longestStreak = 0;
     let currentStreak = 0;
-    for (let i = 0; i < activeDayKeys.length; i++) {
+    const sortedDays = [...activeDayKeys].sort();
+    
+    for (let i = 0; i < sortedDays.length; i++) {
       if (i === 0) {
         currentStreak = 1;
-        longestStreak = 1;
       } else {
-        const prev = new Date(activeDayKeys[i - 1]);
-        const cur = new Date(activeDayKeys[i]);
-        const diffDays = Math.round((cur - prev) / (1000 * 60 * 60 * 24));
+        const prevDate = new Date(sortedDays[i - 1]);
+        const currDate = new Date(sortedDays[i]);
+        const diffDays = (currDate - prevDate) / (1000 * 60 * 60 * 24);
+        
         if (diffDays === 1) {
-          currentStreak += 1;
-          longestStreak = Math.max(longestStreak, currentStreak);
+          currentStreak++;
         } else {
+          longestStreak = Math.max(longestStreak, currentStreak);
           currentStreak = 1;
         }
       }
     }
+    longestStreak = Math.max(longestStreak, currentStreak);
 
-    // Calendar days in range
-    let calendarDays = 0;
-    if (firstDay && lastDay) {
-      const start = new Date(firstDay);
-      const end = new Date(lastDay);
-      calendarDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1);
-    }
-
-    // Averages
     const avgPerActiveDay = activeDayKeys.length > 0 ? Math.round(totalMinutesAll / activeDayKeys.length) : 0;
     const avgPerCalendarDay = calendarDays > 0 ? Math.round(totalMinutesAll / calendarDays) : 0;
     const avgPerSession = allSessions.length > 0 ? Math.round(totalMinutesAll / allSessions.length) : 0;
 
-    // Top tasks by total time
-    const taskTotals = new Map();
-    for (const s of allSessions) {
-      taskTotals.set(s.taskId, (taskTotals.get(s.taskId) || 0) + (s.duration || 0));
-    }
-    const taskNameById = new Map(tasks.map(t => [t.id, t.name]));
-    const topTasks = Array.from(taskTotals.entries())
-      .map(([taskId, secs]) => ({
+    // Top tasks
+    const taskDurations = {};
+    allSessions.forEach(s => {
+      taskDurations[s.taskId] = (taskDurations[s.taskId] || 0) + s.duration;
+    });
+
+    const topTasks = Object.entries(taskDurations)
+      .map(([taskId, seconds]) => ({
         taskId,
-        name: taskNameById.get(taskId) || "Task đã xóa",
-        seconds: secs,
-        minutes: Math.round(secs / 60),
+        seconds,
+        minutes: Math.round(seconds / 60),
+        name: tasks.find(t => t.id === Number(taskId))?.name || "Task đã xóa"
       }))
       .sort((a, b) => b.seconds - a.seconds)
       .slice(0, 5);
 
-    const maxTop = topTasks[0]?.seconds || 1;
+    const maxTop = topTasks.length > 0 ? topTasks[0].seconds : 1;
 
-    // Longest single session
-    const longest = allSessions.reduce(
-      (best, s) => (s.duration > (best?.duration || 0) ? s : best),
-      null
-    );
-    const longestPretty = longest
-      ? {
-          minutes: Math.round(longest.duration / 60),
-          task: taskNameById.get(longest.taskId) || "Task đã xóa",
-          date: new Date(longest.completedAt).toLocaleString("vi-VN"),
-        }
-      : null;
+    // Longest session
+    const longestSession = allSessions.reduce((max, s) => s.duration > max.duration ? s : max, { duration: 0 });
+    const longestPretty = longestSession.duration > 0 ? {
+      minutes: Math.round(longestSession.duration / 60),
+      task: tasks.find(t => t.id === longestSession.taskId)?.name || "Task đã xóa",
+      date: new Date(longestSession.completedAt).toLocaleDateString("vi-VN")
+    } : null;
 
     return {
       totalMinutesAll,
-      totalHoursAll: Math.floor(totalMinutesAll / 60),
-      remainingMinutesAll: totalMinutesAll % 60,
+      totalHoursAll,
+      remainingMinutesAll,
       sessionsCount: allSessions.length,
       activeDays: activeDayKeys.length,
       calendarDays,
@@ -626,48 +588,47 @@ const HistoryView = ({
   const canShowHeatmap = filter !== "day";
 
   return (
-    <div className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-gray-200">
+    <div className="wire-card p-4 mb-4">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <h2 className="text-lg font-semibold text-gray-900">
-              {viewMode === "overview" ? "🌐 Tổng quan toàn bộ dữ liệu" : `📊 Thống kê ${getFilterText(filter)}`}
+              {viewMode === "overview" ? "🌐 Tổng quan" : `📊 Thống kê ${getFilterText(filter)}`}
             </h2>
 
-            {/* View Mode Toggle */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+            {/* View Mode Toggle - Wireframe Style */}
+            <div className="flex border-2 border-black rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode("chart")}
-                className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
-                  viewMode === "chart" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                className={`px-3 py-1 text-sm font-medium transition-colors ${
+                  viewMode === "chart" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
                 }`}
                 title="Biểu đồ cột"
               >
-                <span>📊</span>
+                📊
               </button>
 
               {canShowHeatmap && (
                 <button
                   onClick={() => setViewMode("heatmap")}
-                  className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
-                    viewMode === "heatmap" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                  className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${
+                    viewMode === "heatmap" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
                   }`}
                   title="Heatmap"
                 >
-                  <span>🔥</span>
+                  🔥
                 </button>
               )}
 
-              {/* NEW: Overview button (always available) */}
               <button
                 onClick={() => setViewMode("overview")}
-                className={`px-2 py-1 text-sm font-medium rounded-md transition-colors flex items-center space-x-1 ${
-                  viewMode === "overview" ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${
+                  viewMode === "overview" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
                 }`}
                 title="Toàn bộ dữ liệu"
               >
-                <span>🌐</span>
+                🌐
               </button>
             </div>
           </div>
@@ -675,7 +636,7 @@ const HistoryView = ({
           {viewMode !== "overview" && sessions.length > 0 && (
             <p className="text-sm text-gray-600">
               Tổng cộng:{" "}
-              <span className="font-semibold text-blue-600">
+              <span className="font-semibold text-gray-900">
                 {formatTotalTime()}
               </span>{" "}
               ({sessions.length} phiên)
@@ -685,26 +646,28 @@ const HistoryView = ({
           {viewMode === "overview" && overview && (
             <p className="text-sm text-gray-600">
               Từ {new Date(overview.firstDay).toLocaleDateString("vi-VN")} đến {new Date(overview.lastDay).toLocaleDateString("vi-VN")} •{" "}
-              <span className="font-semibold text-blue-600">
+              <span className="font-semibold text-gray-900">
                 {overview.totalHoursAll} giờ {overview.remainingMinutesAll} phút
               </span>{" "}
-              ({overview.sessionsCount} phiên, {overview.activeDays}/{overview.calendarDays} ngày hoạt động)
+              ({overview.sessionsCount} phiên, {overview.activeDays}/{overview.calendarDays} ngày)
             </p>
           )}
         </div>
 
-        {/* Filter Toggle (ẩn khi Overview để tập trung nội dung) */}
+        {/* Filter Toggle - Wireframe Style */}
         {viewMode !== "overview" && (
-          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-            {["day", "week", "month"].map((f) => (
+          <div className="flex border-2 border-black rounded-lg overflow-hidden">
+            {["day", "week", "month"].map((f, index) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                  filter === f ? "bg-white text-blue-600 shadow-sm" : "text-gray-600 hover:text-gray-900"
+                className={`px-3 py-1 text-sm font-medium transition-colors ${
+                  index > 0 ? 'border-l-2 border-black' : ''
+                } ${
+                  filter === f ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                {f === "day" ? "Ngày" : f === "week" ? "Tuần" : "Tháng"}
+                {f === "day" ? "Hôm nay" : f === "week" ? "Tuần" : "Tháng"}
               </button>
             ))}
           </div>
@@ -713,65 +676,69 @@ const HistoryView = ({
 
       {/* Content Area */}
       {viewMode === "overview" ? (
-        // NEW: Overview Panel (special, eye-catching)
         <div className="space-y-4">
-          {/* Top KPIs */}
+          {/* Top KPIs - Wireframe Style */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-xl p-4 bg-gradient-to-br from-blue-600 to-indigo-500 text-white shadow-md">
+            <div className="wire-stat-card-dark">
               <div className="text-sm opacity-90">Tổng thời gian</div>
-              <div className="text-2xl font-bold mt-1">{overview.totalHoursAll}h {overview.remainingMinutesAll}p</div>
-              <div className="text-xs mt-1 opacity-90">TB/ngày hoạt động: {formatMinutes(overview.avgPerActiveDay)}</div>
+              <div className="text-2xl font-bold mt-1">{overview?.totalHoursAll || 0}h {overview?.remainingMinutesAll || 0}p</div>
+              <div className="text-xs mt-1 opacity-70">TB/ngày: {formatMinutes(overview?.avgPerActiveDay || 0)}</div>
             </div>
-            <div className="rounded-xl p-4 bg-gradient-to-br from-emerald-500 to-green-500 text-white shadow-md">
-              <div className="text-sm opacity-90">Phiên làm việc</div>
-              <div className="text-2xl font-bold mt-1">{overview.sessionsCount}</div>
-              <div className="text-xs mt-1 opacity-90">TB/phiên: {formatMinutes(overview.avgPerSession)}</div>
+            <div className="wire-stat-card">
+              <div className="text-sm text-gray-600">Phiên làm việc</div>
+              <div className="text-2xl font-bold mt-1 text-gray-900">{overview?.sessionsCount || 0}</div>
+              <div className="text-xs mt-1 text-gray-500">TB/phiên: {formatMinutes(overview?.avgPerSession || 0)}</div>
             </div>
-            <div className="rounded-xl p-4 bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-md">
-              <div className="text-sm opacity-90">Chuỗi dài nhất</div>
-              <div className="text-2xl font-bold mt-1">{overview.longestStreak} ngày</div>
-              <div className="text-xs mt-1 opacity-90">TB/ngày lịch: {formatMinutes(overview.avgPerCalendarDay)}</div>
+            <div className="wire-stat-card">
+              <div className="text-sm text-gray-600">Chuỗi dài nhất</div>
+              <div className="text-2xl font-bold mt-1 text-gray-900">{overview?.longestStreak || 0} ngày</div>
+              <div className="text-xs mt-1 text-gray-500">TB/ngày lịch: {formatMinutes(overview?.avgPerCalendarDay || 0)}</div>
             </div>
           </div>
 
-          {/* Top Tasks */}
-          <div className="rounded-xl p-4 border bg-white shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-gray-800">🏆 Top Tasks (toàn bộ dữ liệu)</h3>
-              <span className="text-xs text-gray-500">Đơn vị: phút</span>
-            </div>
-            <div className="space-y-2">
-              {overview.topTasks.map((t) => {
-                const pct = Math.round((t.seconds / overview.maxTop) * 100);
-                return (
-                  <div key={t.taskId}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-gray-800">{t.name}</span>
-                      <span className="text-gray-600">{t.minutes}p</span>
+          {/* Top Tasks - Wireframe Style */}
+          {overview && (
+            <div className="wire-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-gray-900">🏆 Top Tasks</h3>
+                <span className="text-xs text-gray-500">Đơn vị: phút</span>
+              </div>
+              <div className="space-y-2">
+                {overview.topTasks.map((t) => {
+                  const pct = Math.round((t.seconds / overview.maxTop) * 100);
+                  return (
+                    <div key={t.taskId}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium text-gray-900">{t.name}</span>
+                        <span className="text-gray-600">{t.minutes}p</span>
+                      </div>
+                      <div className="w-full h-3 rounded border-2 border-black bg-white overflow-hidden">
+                        <div
+                          className="h-full"
+                          style={{ 
+                            width: `${pct}%`,
+                            background: 'repeating-linear-gradient(45deg, #1a1a1a, #1a1a1a 3px, #4a4a4a 3px, #4a4a4a 6px)'
+                          }}
+                          title={`${pct}%`}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full h-3 rounded-full bg-gray-200 overflow-hidden">
-                      <div
-                        className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
-                        style={{ width: `${pct}%` }}
-                        title={`${pct}%`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {overview.topTasks.length === 0 && (
-                <div className="text-sm text-gray-500">Chưa có dữ liệu.</div>
-              )}
+                  );
+                })}
+                {overview.topTasks.length === 0 && (
+                  <div className="text-sm text-gray-500">Chưa có dữ liệu.</div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Longest Session */}
-          {overview.longestPretty && (
-            <div className="rounded-xl p-4 bg-slate-50 border shadow-sm">
+          {overview?.longestPretty && (
+            <div className="wire-card p-4">
               <div className="flex items-center space-x-3">
                 <div className="text-3xl">⏱️</div>
                 <div>
-                  <div className="font-semibold text-gray-800">
+                  <div className="font-semibold text-gray-900">
                     Phiên dài nhất: {overview.longestPretty.minutes} phút
                   </div>
                   <div className="text-sm text-gray-600">
@@ -783,7 +750,6 @@ const HistoryView = ({
           )}
         </div>
       ) : (
-        // OLD: chart/heatmap content remains
         <>
           {sessions.length > 0 ? (
             <>
@@ -798,42 +764,24 @@ const HistoryView = ({
                     />
                   </div>
                   
-                  {/* Quick Stats - UPDATED to show avg per session and per day */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+                  {/* Quick Stats - Wireframe Style */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t-2 border-black">
                     <div className="text-center">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        Tổng phiên
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Tổng thời gian</p>
+                      <p className="text-lg font-bold text-gray-900">{formatTotalTime()}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Tổng phiên</p>
+                      <p className="text-lg font-bold text-gray-900">{sessions.length}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">TB / Phiên</p>
                       <p className="text-lg font-bold text-gray-900">
-                        {sessions.length}
+                        {sessions.length > 0 ? `${Math.round(totalMinutes / sessions.length)}p` : "0p"}
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        TB / Phiên
-                      </p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {sessions.length > 0
-                          ? `${Math.round(totalMinutes / sessions.length)}p`
-                          : "0p"}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        TB / Ngày
-                      </p>
-                      <p className="text-lg font-bold text-gray-900">
-                        {numberOfDaysWithSessions > 0
-                          ? `${Math.round(
-                              totalMinutes / numberOfDaysWithSessions
-                            )}p`
-                          : "0p"}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">
-                        Tasks
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wide">Tasks</p>
                       <p className="text-lg font-bold text-gray-900">
                         {new Set(sessions.map((s) => s.taskId)).size}
                       </p>

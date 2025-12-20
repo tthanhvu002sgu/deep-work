@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 const today = () => new Date().toISOString().split('T')[0];
 
 export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
-    const [target, setTarget] = useState(currentTarget || 60); // Default 60 minutes
+    const [target, setTarget] = useState(currentTarget || 60);
     
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -12,13 +12,13 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
         }
     };
     
-    const presetTargets = [30, 60, 90, 120, 180]; // Minutes
+    const presetTargets = [30, 60, 90, 120, 180];
     
     return (
         <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl">
-                <h3 className="text-lg font-bold mb-3 text-center">🎯 Đặt mục tiêu hôm nay</h3>
-                <p className="text-sm text-slate-600 text-center mb-4">
+            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
+                <h3 className="text-lg font-bold mb-3 text-center text-gray-900">🎯 Đặt mục tiêu hôm nay</h3>
+                <p className="text-sm text-gray-600 text-center mb-4">
                     Đặt mục tiêu thời gian tập trung cho ngày hôm nay
                 </p>
                 
@@ -30,10 +30,10 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
                                 key={minutes} 
                                 type="button" 
                                 onClick={() => setTarget(minutes)} 
-                                className={`py-3 text-sm font-semibold rounded-lg transition-colors ${
+                                className={`py-3 text-sm font-semibold rounded-lg transition-colors border-2 ${
                                     target === minutes 
-                                        ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' 
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        ? 'border-black bg-black text-white' 
+                                        : 'border-black bg-white text-gray-900 hover:bg-gray-100'
                                 }`}
                             >
                                 {minutes}p
@@ -43,7 +43,7 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
                     
                     {/* Custom Target Input */}
                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Hoặc nhập tùy chỉnh (phút):
                         </label>
                         <input 
@@ -51,14 +51,14 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
                             value={target}
                             onChange={(e) => setTarget(Math.max(1, parseInt(e.target.value) || 1))}
                             min="1"
-                            max="720" // Max 12 hours
-                            className="w-full text-center py-3 text-lg font-semibold rounded-lg bg-slate-100 text-slate-700 border-none focus:ring-2 focus:ring-blue-500" 
+                            max="720"
+                            className="w-full text-center py-3 text-lg font-semibold rounded-lg bg-white text-gray-900 border-2 border-black focus:ring-2 focus:ring-gray-400" 
                         />
                     </div>
                     
                     {/* Preview */}
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-700 text-center">
+                    <div className="mb-4 p-3 bg-gray-100 rounded-lg border-2 border-black">
+                        <p className="text-sm text-gray-700 text-center">
                             📊 Mục tiêu: <span className="font-semibold">{target} phút tập trung</span>
                         </p>
                     </div>
@@ -67,13 +67,13 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
                         <button 
                             type="button" 
                             onClick={onClose} 
-                            className="flex-1 py-3 font-semibold bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+                            className="flex-1 py-3 font-semibold rounded-lg transition-colors border-2 border-black bg-white text-gray-900 hover:bg-gray-100"
                         >
                             Hủy
                         </button>
                         <button 
                             type="submit" 
-                            className="flex-1 py-3 font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            className="flex-1 py-3 font-bold rounded-lg border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors"
                         >
                             Đặt mục tiêu 🎯
                         </button>
@@ -100,7 +100,7 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
     const handleDurationSelect = (d) => {
         if (d === 'free') {
             setIsFreeMode(true);
-            setDuration(0); // Set to 0 for free mode
+            setDuration(0);
         } else {
             setIsFreeMode(false);
             setDuration(d);
@@ -115,9 +115,9 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (task) { // Starting an existing task
+        if (task) {
             onStartSession(task, isFreeMode ? 0 : duration);
-        } else { // Adding a new task
+        } else {
             if (!name.trim()) return;
             onAddTask(name.trim());
         }
@@ -125,15 +125,15 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
     
     return (
         <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl">
-                <h3 className="text-lg font-bold mb-3 text-center">{task ? 'Bắt đầu phiên làm việc' : 'Thêm Task Mới'}</h3>
+            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
+                <h3 className="text-lg font-bold mb-3 text-center text-gray-900">{task ? 'Bắt đầu phiên làm việc' : 'Thêm Task Mới'}</h3>
                 <form onSubmit={handleSubmit}>
                     <input 
                       type="text" 
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="✏️ Nhập tên công việc..." 
-                      className="w-full text-lg font-semibold border-none focus:ring-0 p-2 mb-3" 
+                      className="w-full text-lg font-semibold border-2 border-black focus:ring-2 focus:ring-gray-400 p-2 mb-3 rounded-lg" 
                       required 
                       disabled={!!task}
                     />
@@ -143,10 +143,10 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
                                 key={d} 
                                 type="button" 
                                 onClick={() => handleDurationSelect(d)} 
-                                className={`duration-btn flex-1 py-2 text-sm font-semibold rounded-lg ${
+                                className={`flex-1 py-2 text-sm font-semibold rounded-lg border-2 transition-colors ${
                                     !isFreeMode && duration === d 
-                                        ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500' 
-                                        : 'bg-slate-100 text-slate-600'
+                                        ? 'border-black bg-black text-white' 
+                                        : 'border-black bg-white text-gray-900 hover:bg-gray-100'
                                 }`}
                             >
                                 {d}p
@@ -155,10 +155,10 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
                         <button 
                             type="button" 
                             onClick={() => handleDurationSelect('free')} 
-                            className={`duration-btn flex-1 py-2 text-sm font-semibold rounded-lg ${
+                            className={`flex-1 py-2 text-sm font-semibold rounded-lg border-2 transition-colors ${
                                 isFreeMode 
-                                    ? 'bg-green-100 text-green-700 ring-2 ring-green-500' 
-                                    : 'bg-slate-100 text-slate-600'
+                                    ? 'border-black bg-black text-white' 
+                                    : 'border-black bg-white text-gray-900 hover:bg-gray-100'
                             }`}
                         >
                             ⏱️ Free
@@ -167,19 +167,19 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
                             type="number" 
                             onChange={handleCustomDurationChange} 
                             placeholder="Khác" 
-                            className="w-full text-center py-2 text-sm font-semibold rounded-lg bg-slate-100 text-slate-600 border-none focus:ring-2 focus:ring-blue-500 flex-1" 
+                            className="w-full text-center py-2 text-sm font-semibold rounded-lg bg-white text-gray-900 border-2 border-black focus:ring-2 focus:ring-gray-400 flex-1" 
                         />
                     </div>
                     {isFreeMode && (
-                        <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                            <p className="text-sm text-green-700 text-center">
+                        <div className="mb-4 p-3 bg-gray-100 rounded-lg border-2 border-black">
+                            <p className="text-sm text-gray-700 text-center">
                                 📈 Chế độ tự do: Thời gian sẽ đếm lên từ 00:00
                             </p>
                         </div>
                     )}
                     <div className="flex space-x-3">
-                        <button type="button" onClick={onClose} className="flex-1 py-3 font-semibold bg-slate-200 text-slate-700 rounded-lg">Hủy</button>
-                        <button type="submit" className="flex-1 py-3 font-bold bg-blue-600 text-white rounded-lg">Bắt đầu ✨</button>
+                        <button type="button" onClick={onClose} className="flex-1 py-3 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors">Hủy</button>
+                        <button type="submit" className="flex-1 py-3 font-bold rounded-lg border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors">Bắt đầu ✨</button>
                     </div>
                 </form>
             </div>
@@ -189,12 +189,12 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
 
 export const SessionEndModal = ({ onContinue, onComplete, onPause }) => (
     <div className="modal-container fixed inset-0 z-30 flex items-end show">
-        <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl text-center">
-            <h3 className="text-xl font-bold mb-2">🎉 Phiên hoàn thành!</h3>
+        <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl text-center border-t-2 border-x-2 border-black">
+            <h3 className="text-xl font-bold mb-2 text-gray-900">🎉 Phiên hoàn thành!</h3>
             <div className="flex flex-col space-y-2 mt-4">
-                <button onClick={onContinue} className="w-full py-3 font-semibold text-white bg-blue-600 rounded-lg">⏭️ Tiếp tục (Nghỉ 5p)</button>
-                <button onClick={onComplete} className="w-full py-3 font-semibold text-white bg-green-500 rounded-lg">✅ Xong</button>
-                <button onClick={onPause} className="w-full py-3 font-semibold text-slate-700 bg-slate-100 rounded-lg">💤 Tạm dừng</button>
+                <button onClick={onContinue} className="w-full py-3 font-semibold text-white bg-black rounded-lg border-2 border-black hover:bg-gray-800 transition-colors">⏭️ Tiếp tục (Nghỉ 5p)</button>
+                <button onClick={onComplete} className="w-full py-3 font-semibold text-gray-900 bg-white rounded-lg border-2 border-black hover:bg-gray-100 transition-colors">✅ Xong</button>
+                <button onClick={onPause} className="w-full py-3 font-semibold text-gray-700 bg-gray-100 rounded-lg border-2 border-black hover:bg-gray-200 transition-colors">💤 Tạm dừng</button>
             </div>
         </div>
     </div>
@@ -202,12 +202,12 @@ export const SessionEndModal = ({ onContinue, onComplete, onPause }) => (
 
 export const ConfirmStopModal = ({ onConfirm, onCancel }) => (
     <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
-        <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center">
-             <h3 className="text-lg font-bold mb-2">Dừng phiên làm việc?</h3>
-             <p className="text-sm text-slate-600 mb-6">Tiến trình của phiên này sẽ không được lưu lại.</p>
+        <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
+             <h3 className="text-lg font-bold mb-2 text-gray-900">Dừng phiên làm việc?</h3>
+             <p className="text-sm text-gray-600 mb-6">Tiến trình của phiên này sẽ không được lưu lại.</p>
              <div className="flex space-x-3">
-                <button onClick={onCancel} className="flex-1 py-2.5 font-semibold bg-slate-200 text-slate-700 rounded-lg">Hủy</button>
-                <button onClick={onConfirm} className="flex-1 py-2.5 font-bold bg-red-500 text-white rounded-lg">Chắc chắn Dừng</button>
+                <button onClick={onCancel} className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors">Hủy</button>
+                <button onClick={onConfirm} className="flex-1 py-2.5 font-bold rounded-lg border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors">Chắc chắn Dừng</button>
              </div>
         </div>
     </div>
@@ -215,14 +215,14 @@ export const ConfirmStopModal = ({ onConfirm, onCancel }) => (
 
 export const ConfirmDeleteModal = ({ task, onConfirm, onCancel }) => (
     <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
-        <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center">
-             <h3 className="text-lg font-bold mb-2">Xóa task?</h3>
-             <p className="text-sm text-slate-600 mb-2">Bạn có chắc chắn muốn xóa task:</p>
+        <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
+             <h3 className="text-lg font-bold mb-2 text-gray-900">Xóa task?</h3>
+             <p className="text-sm text-gray-600 mb-2">Bạn có chắc chắn muốn xóa task:</p>
              <p className="text-sm font-semibold text-slate-800 mb-4">"{task?.name}"</p>
-             <p className="text-xs text-slate-500 mb-6">Tất cả dữ liệu phiên làm việc liên quan sẽ bị xóa vĩnh viễn.</p>
+             <p className="text-xs text-gray-500 mb-6">Tất cả dữ liệu phiên làm việc liên quan sẽ bị xóa vĩnh viễn.</p>
              <div className="flex space-x-3">
-                <button onClick={onCancel} className="flex-1 py-2.5 font-semibold bg-slate-200 text-slate-700 rounded-lg">Hủy</button>
-                <button onClick={onConfirm} className="flex-1 py-2.5 font-bold bg-red-500 text-white rounded-lg">Xóa</button>
+                <button onClick={onCancel} className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors">Hủy</button>
+                <button onClick={onConfirm} className="flex-1 py-2.5 font-bold rounded-lg border-2 border-black bg-red-500 text-white hover:bg-red-600 transition-colors">Xóa</button>
              </div>
         </div>
     </div>
@@ -247,13 +247,13 @@ export const ErrorModal = ({ error, onClose, onRetry }) => (
             <div className="flex space-x-3">
                 <button 
                     onClick={onRetry}
-                    className="flex-1 py-2.5 font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
                     Thử lại
                 </button>
                 <button 
                     onClick={onClose}
-                    className="flex-1 py-2.5 font-semibold bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
                 >
                     Đóng
                 </button>
@@ -430,7 +430,7 @@ export const EditTaskModal = ({ task, onClose, onSave }) => {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Nhập tên task..." 
-                            className="w-full text-lg font-semibold border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent rounded-lg p-3" 
+                            className="w-full text-lg font-semibold border-2 border-black focus:ring-2 focus:ring-gray-400 focus:border-transparent rounded-lg p-3" 
                             required 
                             autoFocus
                             disabled={isSaving}
@@ -463,17 +463,17 @@ export const EditTaskModal = ({ task, onClose, onSave }) => {
 // NEW: Confirm Archive/Unarchive Modal
 export const ConfirmArchiveModal = ({ task, onConfirm, onCancel }) => (
     <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
-        <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center">
-            <h3 className="text-lg font-bold mb-2">
+        <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
+            <h3 className="text-lg font-bold mb-2 text-gray-900">
                 {task?.isArchived ? '📤 Hiện task?' : '📦 Ẩn task?'}
             </h3>
-            <p className="text-sm text-slate-600 mb-2">
+            <p className="text-sm text-gray-600 mb-2">
                 {task?.isArchived 
                     ? 'Task sẽ hiển thị trở lại trong danh sách:'
                     : 'Task sẽ được ẩn khỏi danh sách:'}
             </p>
-            <p className="text-sm font-semibold text-slate-800 mb-4">"{task?.name}"</p>
-            <p className="text-xs text-slate-500 mb-6">
+            <p className="text-sm font-semibold text-gray-800 mb-4">"{task?.name}"</p>
+            <p className="text-xs text-gray-500 mb-6">
                 {task?.isArchived 
                     ? 'Tất cả dữ liệu vẫn được giữ nguyên.'
                     : 'Tất cả dữ liệu phiên làm việc vẫn được giữ nguyên. Bạn có thể hiện lại task bất kỳ lúc nào.'}
@@ -481,19 +481,19 @@ export const ConfirmArchiveModal = ({ task, onConfirm, onCancel }) => (
             <div className="flex space-x-3">
                 <button 
                     onClick={onCancel} 
-                    className="flex-1 py-2.5 font-semibold bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
+                    className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors"
                 >
                     Hủy
                 </button>
                 <button 
                     onClick={onConfirm} 
-                    className={`flex-1 py-2.5 font-bold text-white rounded-lg transition-colors ${
+                    className={`flex-1 py-2.5 font-bold text-white rounded-lg border-2 border-black transition-colors ${
                         task?.isArchived 
-                            ? 'bg-green-500 hover:bg-green-600' 
-                            : 'bg-orange-500 hover:bg-orange-600'
+                            ? 'bg-black hover:bg-gray-800' 
+                            : 'bg-gray-700 hover:bg-gray-800'
                     }`}
                 >
-                    {task?.isArchived ? 'Hiện lại' : 'Ẩn đi'}
+                    {task?.isArchived ? 'Hiện' : 'Ẩn'}
                 </button>
             </div>
         </div>
@@ -501,70 +501,58 @@ export const ConfirmArchiveModal = ({ task, onConfirm, onCancel }) => (
 );
 
 // NEW: Archived Tasks Modal
-export const ArchivedTasksModal = ({ tasks, onClose, onUnarchive, onDelete }) => {
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold">📦 Tasks đã ẩn</h3>
-                    <button 
-                        onClick={onClose}
-                        className="text-slate-400 hover:text-slate-600 text-2xl"
-                    >
-                        ×
-                    </button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-3">
-                    {tasks.length === 0 ? (
-                        <div className="text-center py-12 text-slate-500">
-                            <div className="text-5xl mb-3">📭</div>
-                            <p>Không có task nào được ẩn</p>
-                        </div>
-                    ) : (
-                        tasks.map(task => (
-                            <div 
-                                key={task.id}
-                                className="bg-slate-50 rounded-lg p-4 border border-slate-200"
+export const ArchivedTasksModal = ({ tasks, onClose, onUnarchive, onDelete }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="bg-white rounded-xl p-6 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border-2 border-black">
+            <div className="flex justify-between items-center mb-4 border-b-2 border-black pb-2">
+                <h3 className="text-xl font-bold text-gray-900">📦 Tasks đã ẩn</h3>
+                <button 
+                    onClick={onClose} 
+                    className="text-2xl font-bold text-gray-500 hover:text-gray-700"
+                >
+                    ✕
+                </button>
+            </div>
+            
+            <div className="space-y-3">
+                {tasks.map(task => (
+                    <div key={task.id} className="flex items-center justify-between p-3 border-2 border-black rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <span className="font-bold text-gray-900 flex-1">{task.name}</span>
+                        <div className="flex space-x-2">
+                            <button 
+                                onClick={() => onUnarchive(task)} 
+                                className="p-2 border-2 border-black rounded-lg bg-white hover:bg-green-50 transition-colors font-bold"
+                                title="Hiện lại task"
                             >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="font-semibold text-slate-800 mb-1">
-                                            {task.name}
-                                        </h4>
-                                        <p className="text-xs text-slate-500">
-                                            Ẩn lúc: {new Date(task.updatedAt).toLocaleString('vi-VN')}
-                                        </p>
-                                    </div>
-                                    <div className="flex space-x-2 ml-2">
-                                        <button
-                                            onClick={() => onUnarchive(task)}
-                                            className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                                            title="Hiện lại"
-                                        >
-                                            📤
-                                        </button>
-                                        <button
-                                            onClick={() => onDelete(task)}
-                                            className="px-3 py-1 text-sm bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                                            title="Xóa vĩnh viễn"
-                                        >
-                                            🗑️
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-
+                                📤
+                            </button>
+                            <button 
+                                onClick={() => onDelete(task)} 
+                                className="p-2 border-2 border-black rounded-lg bg-white hover:bg-red-50 transition-colors font-bold"
+                                title="Xóa vĩnh viễn"
+                            >
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                ))}
+                
+                {tasks.length === 0 && (
+                    <div className="text-center py-8">
+                        <div className="text-4xl mb-2">📝</div>
+                        <p className="text-gray-500">Không có tasks nào đã ẩn</p>
+                    </div>
+                )}
+            </div>
+            
+            <div className="mt-6 pt-4 border-t-2 border-black">
                 <button
                     onClick={onClose}
-                    className="mt-4 w-full py-3 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors"
+                    className="w-full py-3 font-bold bg-black text-white rounded-lg border-2 border-black hover:bg-gray-800 transition-colors"
                 >
                     Đóng
                 </button>
             </div>
         </div>
-    );
-};
+    </div>
+);

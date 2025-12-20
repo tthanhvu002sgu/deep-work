@@ -3,10 +3,10 @@
 import React from 'react';
 
 const TaskItem = ({ task, onClick, onEdit, onArchive, onDelete }) => (
-    <div className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between hover:bg-slate-50 transition-colors">
+    <div className="wire-card p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
         <div className="flex items-center flex-1 cursor-pointer" onClick={onClick}>
             <span className="text-2xl mr-3">🎯</span>
-            <span className="font-semibold text-slate-700">{task.name}</span>
+            <span className="font-semibold text-gray-900">{task.name}</span>
         </div>
         <div className="flex items-center space-x-2">
             {/* Edit Button */}
@@ -15,7 +15,7 @@ const TaskItem = ({ task, onClick, onEdit, onArchive, onDelete }) => (
                     e.stopPropagation();
                     onEdit(task);
                 }}
-                className="bg-blue-100 text-blue-600 hover:bg-blue-200 font-bold py-2 px-3 rounded-lg transition-colors"
+                className="wire-btn-outline py-2 px-3 rounded-md text-sm"
                 aria-label={`Chỉnh sửa task ${task.name}`}
                 title="Chỉnh sửa"
             >
@@ -28,7 +28,7 @@ const TaskItem = ({ task, onClick, onEdit, onArchive, onDelete }) => (
                     e.stopPropagation();
                     onArchive(task);
                 }}
-                className="bg-orange-100 text-orange-600 hover:bg-orange-200 font-bold py-2 px-3 rounded-lg transition-colors"
+                className="wire-btn-outline py-2 px-3 rounded-md text-sm"
                 aria-label={`Ẩn task ${task.name}`}
                 title="Ẩn task"
             >
@@ -41,7 +41,7 @@ const TaskItem = ({ task, onClick, onEdit, onArchive, onDelete }) => (
                     e.stopPropagation();
                     onDelete(task);
                 }}
-                className="bg-red-100 text-red-600 hover:bg-red-200 font-bold py-2 px-3 rounded-lg transition-colors"
+                className="wire-btn-outline py-2 px-3 rounded-md text-sm"
                 aria-label={`Xóa task ${task.name}`}
                 title="Xóa vĩnh viễn"
             >
@@ -51,7 +51,7 @@ const TaskItem = ({ task, onClick, onEdit, onArchive, onDelete }) => (
             {/* Start Button */}
             <span 
                 onClick={onClick}
-                className="bg-blue-100 text-blue-700 font-bold py-2 px-4 rounded-lg cursor-pointer hover:bg-blue-200 transition-colors"
+                className="wire-btn-primary py-2 px-4 rounded-md cursor-pointer text-sm font-semibold"
             >
                 ▶️ Bắt đầu
             </span>

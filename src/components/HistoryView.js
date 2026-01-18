@@ -27,6 +27,15 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
   // Calculate data for heatmap
   const heatmapData = useMemo(() => {
     const now = new Date();
+    
+    // Helper to get local date key format YYYY-MM-DD
+    const getLocalDateKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     const dates = [];
 
     // Generate date range based on filter
@@ -53,9 +62,9 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
     }
 
     return dates.map((date) => {
-      const dateKey = date.toISOString().split("T")[0];
+      const dateKey = getLocalDateKey(date);
       const daySessions = sessions.filter((s) => {
-        const sessionDate = new Date(s.completedAt).toISOString().split("T")[0];
+        const sessionDate = getLocalDateKey(new Date(s.completedAt));
         return sessionDate === dateKey;
       });
 
@@ -472,7 +481,13 @@ const HistoryView = ({
   const numberOfDaysWithSessions = useMemo(() => {
     if (sessions.length === 0) return 0;
     return new Set(
-      sessions.map((s) => new Date(s.completedAt).toISOString().split("T")[0])
+      sessions.map((s) => {
+        const d = new Date(s.completedAt);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      })
     ).size;
   }, [sessions]);
 
@@ -494,7 +509,13 @@ const HistoryView = ({
     const totalHoursAll = Math.floor(totalMinutesAll / 60);
     const remainingMinutesAll = totalMinutesAll % 60;
 
-    const dayKey = (d) => new Date(d).toISOString().split("T")[0];
+    const dayKey = (dateInput) => {
+      const d = new Date(dateInput);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
     const activeDayKeys = Array.from(new Set(allSessions.map(s => dayKey(s.completedAt)))).sort();
 
     const firstDay = activeDayKeys[0];

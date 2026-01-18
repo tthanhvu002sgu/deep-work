@@ -2,7 +2,7 @@
   "name": "deepwork",
   "version": "0.1.0",
   "private": true,
-  "homepage": "./",
+  "homepage": "https://tthanhvu002sgu.github.io/deep-work",
   "main": "public/electron.js",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",

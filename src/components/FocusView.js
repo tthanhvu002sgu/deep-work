@@ -14,7 +14,7 @@ const formatTimer = (seconds) => {
 const createNotificationSound = () => {
   try {
     // Tạo audio instance sẵn
-    const audio = new Audio("/noti2.mp3");
+    const audio = new Audio(`${process.env.PUBLIC_URL}/noti2.mp3`);
     audio.volume = 0.7;
     audio.preload = "auto"; // Preload để sẵn sàng phát
 

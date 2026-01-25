@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/deep-work/static/css/main.e68de44f.css",
-    "main.js": "/deep-work/static/js/main.5dfe0360.js",
+    "main.js": "/deep-work/static/js/main.b9329c4b.js",
     "static/js/453.b7e26ebf.chunk.js": "/deep-work/static/js/453.b7e26ebf.chunk.js",
     "index.html": "/deep-work/index.html",
     "main.e68de44f.css.map": "/deep-work/static/css/main.e68de44f.css.map",
-    "main.5dfe0360.js.map": "/deep-work/static/js/main.5dfe0360.js.map",
+    "main.b9329c4b.js.map": "/deep-work/static/js/main.b9329c4b.js.map",
     "453.b7e26ebf.chunk.js.map": "/deep-work/static/js/453.b7e26ebf.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e68de44f.css",
-    "static/js/main.5dfe0360.js"
+    "static/js/main.b9329c4b.js"
   ]
 }

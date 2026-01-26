@@ -13,10 +13,11 @@ import {
   DailyTargetModal,
   LoadingModal,
   ErrorModal,
-  EditTaskModal, // NEW
-  ConfirmArchiveModal, // NEW
-  ArchivedTasksModal, // NEW,
-  DailySummaryModal
+  EditTaskModal,
+  ConfirmArchiveModal,
+  ArchivedTasksModal,
+  DailySummaryModal,
+  ManualSessionModal, // NEW: Thêm thời gian thủ công
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
 import fileStorageService from "./services/fileStorageService";
@@ -32,7 +33,7 @@ const App = () => {
   const [modal, setModal] = useState(null);
   const [taskToStart, setTaskToStart] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
-  
+
   // NEW: States for edit and archive
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [taskToArchive, setTaskToArchive] = useState(null);
@@ -44,7 +45,7 @@ const App = () => {
   const [currentDateKey, setCurrentDateKey] = useState(
     new Date().toDateString()
   );
-  
+
   // NEW: Daily summary state
   const [dailySummaryDate, setDailySummaryDate] = useState(null);
 
@@ -422,27 +423,27 @@ const App = () => {
       const lastShownKey = 'deepwork_last_summary_shown';
       const lastShown = localStorage.getItem(lastShownKey);
       const todayKey = now.toISOString().split('T')[0];
-      
+
       // Check if it's 11 PM or later (23:00)
       const isAfter11PM = now.getHours() >= 23;
-      
+
       // Or if it's a new day and we haven't shown summary for yesterday
       const isNewDay = lastShown !== todayKey;
-      
+
       if ((isAfter11PM || isNewDay) && lastShown !== todayKey) {
         // Get yesterday's date if it's a new day, or today if it's 11 PM
         const summaryDate = isNewDay && now.getHours() < 23
           ? new Date(now.getTime() - 24 * 60 * 60 * 1000) // Yesterday
           : now; // Today
-        
+
         const summaryDateKey = summaryDate.toISOString().split('T')[0];
-        
+
         // Check if there are any sessions for that day
         const daySessions = sessions.filter(s => {
           const sessionDate = new Date(s.completedAt).toISOString().split('T')[0];
           return sessionDate === summaryDateKey;
         });
-        
+
         // Show summary even if no sessions (to encourage user)
         setDailySummaryDate(summaryDateKey);
         setModal('dailySummary');
@@ -495,7 +496,7 @@ const App = () => {
 
     try {
       const updatedTask = await fileStorageService.toggleTaskArchive(taskToArchive.id);
-      
+
       if (updatedTask.isArchived) {
         // Move to archived
         setTasks(prev => prev.filter(t => t.id !== taskToArchive.id));
@@ -528,6 +529,35 @@ const App = () => {
 
   const handleCloseArchivedTasks = useCallback(() => {
     setShowArchivedTasks(false);
+  }, []);
+
+  // NEW: Handle manual session (thêm thời gian thủ công)
+  const handleManualSession = useCallback(async (taskId, durationInSeconds) => {
+    console.log("🔄 Thêm phiên thủ công:", { taskId, durationInSeconds });
+
+    try {
+      const newSession = await fileStorageService.addSession(taskId, durationInSeconds);
+      console.log("💾 Phiên thủ công đã lưu:", newSession);
+
+      setSessions((prevSessions) => {
+        if (prevSessions.some((s) => s.id === newSession.id)) {
+          return prevSessions;
+        }
+        return [...prevSessions, newSession];
+      });
+
+      if (typeof fileStorageService.forceSave === "function") {
+        await fileStorageService.forceSave();
+        console.log("✅ Đã lưu dữ liệu vào storage");
+      }
+
+      setModal(null);
+      return newSession;
+    } catch (error) {
+      console.error("❌ Lỗi khi thêm phiên thủ công:", error);
+      setError("Không thể lưu phiên làm việc: " + error.message);
+      throw error;
+    }
   }, []);
 
   return (
@@ -598,6 +628,16 @@ const App = () => {
               title="Quản lý file dữ liệu"
             >
               📁
+            </button>
+
+            {/* NEW: Thêm thời gian thủ công Button */}
+            <button
+              onClick={() => setModal("manualSession")}
+              className="bg-purple-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-purple-700 transition transform hover:scale-110"
+              aria-label="Thêm thời gian thủ công"
+              title="Thêm thời gian thủ công"
+            >
+              ⏱️
             </button>
 
             <button
@@ -731,12 +771,21 @@ const App = () => {
       {modal === "dailySummary" && dailySummaryDate && (
         <DailySummaryModal
           date={dailySummaryDate}
-          sessions={sessions.filter(s => 
+          sessions={sessions.filter(s =>
             new Date(s.completedAt).toISOString().split('T')[0] === dailySummaryDate
           )}
           tasks={tasks}
           dailyTarget={Math.round(dailyTarget / 60)} // Convert to minutes
           onClose={handleCloseDailySummary}
+        />
+      )}
+
+      {/* NEW: Manual Session Modal */}
+      {modal === "manualSession" && (
+        <ManualSessionModal
+          tasks={tasks}
+          onClose={() => setModal(null)}
+          onSubmit={handleManualSession}
         />
       )}
     </div>

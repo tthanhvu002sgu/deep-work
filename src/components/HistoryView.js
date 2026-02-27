@@ -27,7 +27,7 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
   // Calculate data for heatmap
   const heatmapData = useMemo(() => {
     const now = new Date();
-    
+
     // Helper to get local date key format YYYY-MM-DD
     const getLocalDateKey = (date) => {
       const year = date.getFullYear();
@@ -169,7 +169,7 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
     if (!dayData.hasActivity) {
       return "bg-white border-2 border-gray-300";
     }
-    
+
     // Đơn giản: chỉ dùng màu xám đậm nhạt theo mức độ
     if (dayData.intensity > 0.7) {
       return "bg-gray-900 border-2 border-black";
@@ -241,7 +241,7 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
               </div>
             ))}
           </div>
-          
+
           <div className="grid grid-cols-7 gap-1">
             {heatmapData.map((dayData) => (
               <div
@@ -350,6 +350,14 @@ const HistoryView = ({
   allSessions = [],
 }) => {
   const [viewMode, setViewMode] = useState("chart");
+  const [chartTooltip, setChartTooltip] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    taskName: "",
+    totalSeconds: 0,
+    sessionsList: [],
+  });
 
   React.useEffect(() => {
     if (filter === "day" && viewMode === "heatmap") {
@@ -357,11 +365,13 @@ const HistoryView = ({
     }
   }, [filter, viewMode]);
 
-  // Chart data with simple wireframe styling
-  const chartData = React.useMemo(() => {
-    const dataByTask = sessions.reduce((acc, session) => {
+  const { chartData, maxSessionsCount } = React.useMemo(() => {
+    // 1. Organize data by task
+    // Map tasks to their session arrays
+    const taskDetailsMap = sessions.reduce((acc, session) => {
       const taskId = session.taskId;
-      acc[taskId] = (acc[taskId] || 0) + session.duration;
+      if (!acc[taskId]) acc[taskId] = [];
+      acc[taskId].push(session.duration);
       return acc;
     }, {});
 
@@ -370,36 +380,65 @@ const HistoryView = ({
       return map;
     }, {});
 
-    const labels = Object.keys(dataByTask).map(
-      (taskId) => taskMap[taskId] || "Task đã xóa"
-    );
-    const data = Object.values(dataByTask).map((totalSeconds) =>
-      Math.round((totalSeconds / 3600) * 10) / 10
-    );
+    const taskIds = Object.keys(taskDetailsMap);
+    const labels = taskIds.map((taskId) => taskMap[taskId] || "Task đã xóa");
+
+    // Find the max number of sessions any task has
+    let maxSessionsCount = 0;
+    taskIds.forEach((taskId) => {
+      if (taskDetailsMap[taskId].length > maxSessionsCount) {
+        maxSessionsCount = taskDetailsMap[taskId].length;
+      }
+    });
+
+    // 2. Create stacked datasets
+    const datasets = [];
+
+    // Helper to generate a background for alternating segments
+    // Since we aren't using repeating-linear-gradient in chart background color easily across all chart integrations, we use simple alternating grays
+    const bgColors = ["#ffffff", "#e5e5e5", "#cfcfcf", "#b8b8b8"];
+
+    for (let i = 0; i < maxSessionsCount; i++) {
+      const dataForThisSessionIndex = taskIds.map((taskId) => {
+        const sessionLengthInSeconds = taskDetailsMap[taskId][i] || 0;
+        return Math.round((sessionLengthInSeconds / 3600) * 100) / 100; // Round to 2 decimals for hours
+      });
+
+      datasets.push({
+        label: `Phiên ${i + 1}`,
+        data: dataForThisSessionIndex,
+        backgroundColor: bgColors[i % bgColors.length], // Alternating colors
+        borderColor: "#1a1a1a",
+        borderWidth: 2,
+        borderRadius: 0,
+        borderSkipped: false,
+      });
+    }
+
+    // We also need to map raw full session arrays to access in the tooltip
+    const rawSessionsList = taskIds.map((taskId) => taskDetailsMap[taskId]);
+
+    // Add custom property to the first dataset to access later in tooltip
+    if (datasets.length > 0) {
+      datasets[0].rawSessionsList = rawSessionsList;
+    }
 
     return {
-      labels,
-      datasets: [
-        {
-          label: "Thời gian tập trung (giờ)",
-          data,
-          backgroundColor: "#ffffff", // Nền trắng đơn giản
-          borderColor: "#1a1a1a",     // Viền đen
-          borderWidth: 2,
-          borderRadius: 0,
-          borderSkipped: false,
-        },
-      ],
+      chartData: {
+        labels,
+        datasets,
+      },
+      maxSessionsCount
     };
   }, [sessions, tasks]);
 
-  const chartOptions = {
+  const chartOptions = React.useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     indexAxis: "y",
     plugins: {
       legend: {
-        display: false,
+        display: false, // We hide the legend to keep it clean, but they are stacked
       },
       title: {
         display: false,
@@ -411,16 +450,53 @@ const HistoryView = ({
         borderColor: '#1a1a1a',
         borderWidth: 2,
         cornerRadius: 0,
-        displayColors: false,
+        displayColors: true,
         callbacks: {
-          label: function (context) {
-            return `${context.parsed.x} giờ`;
+          title: function (context) {
+            return context[0].label; // Task name
           },
+          label: function (context) {
+            const rawHrs = context.raw;
+            if (rawHrs === 0) return null; // Hide empty session segments from tooltip if Chart.js tries to render it
+
+            // Format time
+            const minutes = Math.round(rawHrs * 60);
+            let timeStr = "";
+            if (minutes >= 60) {
+              const h = Math.floor(minutes / 60);
+              const m = minutes % 60;
+              timeStr = m > 0 ? `${h}h ${m}p` : `${h}h`;
+            } else {
+              timeStr = `${minutes}p`;
+            }
+
+            return `${context.dataset.label}: ${timeStr}`;
+          },
+          footer: function (context) {
+            // Let's add the total at the footer
+            const dataIndex = context[0].dataIndex;
+            let totalHrs = 0;
+            context[0].chart.data.datasets.forEach(ds => {
+              totalHrs += (ds.data[dataIndex] || 0);
+            });
+
+            const totalMinutes = Math.round(totalHrs * 60);
+            let timeStr = "";
+            if (totalMinutes >= 60) {
+              const h = Math.floor(totalMinutes / 60);
+              const m = totalMinutes % 60;
+              timeStr = m > 0 ? `${h}h ${m}p` : `${h}h`;
+            } else {
+              timeStr = `${totalMinutes}p`;
+            }
+            return `\nTổng cộng: ${timeStr}`;
+          }
         },
       },
     },
     scales: {
       x: {
+        stacked: true,
         beginAtZero: true,
         ticks: {
           color: '#1a1a1a',
@@ -442,6 +518,7 @@ const HistoryView = ({
         },
       },
       y: {
+        stacked: true,
         ticks: {
           color: '#1a1a1a',
           maxRotation: 0,
@@ -465,7 +542,7 @@ const HistoryView = ({
         borderWidth: 2,
       },
     },
-  };
+  }), []);
 
   const getFilterText = (filter) => {
     if (filter === "day") return "hôm nay";
@@ -520,16 +597,16 @@ const HistoryView = ({
 
     const firstDay = activeDayKeys[0];
     const lastDay = activeDayKeys[activeDayKeys.length - 1];
-    
-    const calendarDays = firstDay && lastDay 
-      ? Math.ceil((new Date(lastDay) - new Date(firstDay)) / (1000 * 60 * 60 * 24)) + 1 
+
+    const calendarDays = firstDay && lastDay
+      ? Math.ceil((new Date(lastDay) - new Date(firstDay)) / (1000 * 60 * 60 * 24)) + 1
       : 0;
 
     // Longest streak
     let longestStreak = 0;
     let currentStreak = 0;
     const sortedDays = [...activeDayKeys].sort();
-    
+
     for (let i = 0; i < sortedDays.length; i++) {
       if (i === 0) {
         currentStreak = 1;
@@ -537,7 +614,7 @@ const HistoryView = ({
         const prevDate = new Date(sortedDays[i - 1]);
         const currDate = new Date(sortedDays[i]);
         const diffDays = (currDate - prevDate) / (1000 * 60 * 60 * 24);
-        
+
         if (diffDays === 1) {
           currentStreak++;
         } else {
@@ -622,9 +699,8 @@ const HistoryView = ({
             <div className="flex border-2 border-black rounded-lg overflow-hidden">
               <button
                 onClick={() => setViewMode("chart")}
-                className={`px-3 py-1 text-sm font-medium transition-colors ${
-                  viewMode === "chart" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 text-sm font-medium transition-colors ${viewMode === "chart" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                  }`}
                 title="Biểu đồ cột"
               >
                 📊
@@ -633,9 +709,8 @@ const HistoryView = ({
               {canShowHeatmap && (
                 <button
                   onClick={() => setViewMode("heatmap")}
-                  className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${
-                    viewMode === "heatmap" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
-                  }`}
+                  className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${viewMode === "heatmap" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                    }`}
                   title="Heatmap"
                 >
                   🔥
@@ -644,9 +719,8 @@ const HistoryView = ({
 
               <button
                 onClick={() => setViewMode("overview")}
-                className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${
-                  viewMode === "overview" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${viewMode === "overview" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                  }`}
                 title="Toàn bộ dữ liệu"
               >
                 🌐
@@ -682,11 +756,9 @@ const HistoryView = ({
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 text-sm font-medium transition-colors ${
-                  index > 0 ? 'border-l-2 border-black' : ''
-                } ${
-                  filter === f ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
-                }`}
+                className={`px-3 py-1 text-sm font-medium transition-colors ${index > 0 ? 'border-l-2 border-black' : ''
+                  } ${filter === f ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                  }`}
               >
                 {f === "day" ? "Hôm nay" : f === "week" ? "Tuần" : "Tháng"}
               </button>
@@ -736,7 +808,7 @@ const HistoryView = ({
                       <div className="w-full h-3 rounded border-2 border-black bg-white overflow-hidden">
                         <div
                           className="h-full"
-                          style={{ 
+                          style={{
                             width: `${pct}%`,
                             background: 'repeating-linear-gradient(45deg, #1a1a1a, #1a1a1a 3px, #4a4a4a 3px, #4a4a4a 6px)'
                           }}
@@ -778,13 +850,13 @@ const HistoryView = ({
                 <>
                   {/* Bar Chart */}
                   <div style={{ height: "250px" }} className="mb-4">
-                    <Bar 
-                      data={chartData} 
-                      options={chartOptions} 
-                      key={`chart-${sessions.length}-${JSON.stringify(sessions.map(s => s.id))}`} 
+                    <Bar
+                      data={chartData}
+                      options={chartOptions}
+                      key={`chart-${sessions.length}-${JSON.stringify(sessions.map(s => s.id))}`}
                     />
                   </div>
-                  
+
                   {/* Quick Stats - Wireframe Style */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t-2 border-black">
                     <div className="text-center">

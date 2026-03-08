@@ -20,6 +20,7 @@ import {
   ManualSessionModal, // NEW: Thêm thời gian thủ công
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
+import BreakView from "./components/BreakView";
 import fileStorageService from "./services/fileStorageService";
 
 const App = () => {
@@ -41,6 +42,7 @@ const App = () => {
   const [showArchivedTasks, setShowArchivedTasks] = useState(false);
 
   const [filter, setFilter] = useState("day");
+  const [activeBreak, setActiveBreak] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentDateKey, setCurrentDateKey] = useState(
     new Date().toDateString()
@@ -285,6 +287,7 @@ const App = () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         setActiveSession(null);
+        setActiveBreak(true);
         setModal(null);
 
         setTimeout(() => {
@@ -562,7 +565,12 @@ const App = () => {
 
   return (
     <div className="h-screen w-screen bg-slate-100 text-slate-800 antialiased overflow-hidden flex flex-col">
-      {!activeSession ? (
+      {activeBreak ? (
+        <BreakView
+          duration={300}
+          onBreakEnd={() => setActiveBreak(false)}
+        />
+      ) : !activeSession ? (
         <>
           <Header
             sessions={filteredSessions}

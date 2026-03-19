@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const formatTimer = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -10,25 +10,37 @@ const BreakView = ({ duration = 300, onBreakEnd }) => {
     const [timeLeft, setTimeLeft] = useState(duration);
     const [isPaused, setIsPaused] = useState(false);
 
+    const targetEndTimeRef = useRef(Date.now() + duration * 1000);
+    const pausedAtRef = useRef(null);
+    const isProcessingEndRef = useRef(false);
+
+    // Xử lý khi pause/resume để cộng dồn thời gian
     useEffect(() => {
-        console.log("BreakView rendered! timeLeft:", timeLeft);
-    });
+        if (isPaused) {
+            pausedAtRef.current = Date.now();
+        } else if (pausedAtRef.current !== null) {
+            const pauseDuration = Date.now() - pausedAtRef.current;
+            targetEndTimeRef.current += pauseDuration;
+            pausedAtRef.current = null;
+        }
+    }, [isPaused]);
 
     useEffect(() => {
-        console.log("BreakView timer effect initialized");
         if (isPaused) return;
 
         const timer = setInterval(() => {
-            console.log("BreakView interval tick");
-            setTimeLeft(prev => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    onBreakEnd();
-                    return 0;
-                }
-                return prev - 1;
-            });
-        }, 1000);
+            const now = Date.now();
+            const remainingMs = targetEndTimeRef.current - now;
+            const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+            
+            setTimeLeft(remainingSec);
+
+            if (remainingSec <= 0 && !isProcessingEndRef.current) {
+                isProcessingEndRef.current = true;
+                clearInterval(timer);
+                onBreakEnd();
+            }
+        }, 1000); // Vẫn chạy mỗi 1s nhưng tính toán dựa trên thời gian thực
 
         return () => clearInterval(timer);
     }, [isPaused, onBreakEnd]);

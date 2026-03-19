@@ -563,12 +563,16 @@ const App = () => {
     }
   }, []);
 
+  const handleBreakEnd = useCallback(() => {
+    setActiveBreak(false);
+  }, []);
+
   return (
     <div className="h-screen w-screen bg-slate-100 text-slate-800 antialiased overflow-hidden flex flex-col">
       {activeBreak ? (
         <BreakView
           duration={300}
-          onBreakEnd={() => setActiveBreak(false)}
+          onBreakEnd={handleBreakEnd}
         />
       ) : !activeSession ? (
         <>

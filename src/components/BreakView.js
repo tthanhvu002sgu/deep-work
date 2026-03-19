@@ -11,9 +11,15 @@ const BreakView = ({ duration = 300, onBreakEnd }) => {
     const [isPaused, setIsPaused] = useState(false);
 
     useEffect(() => {
+        console.log("BreakView rendered! timeLeft:", timeLeft);
+    });
+
+    useEffect(() => {
+        console.log("BreakView timer effect initialized");
         if (isPaused) return;
 
         const timer = setInterval(() => {
+            console.log("BreakView interval tick");
             setTimeLeft(prev => {
                 if (prev <= 1) {
                     clearInterval(timer);

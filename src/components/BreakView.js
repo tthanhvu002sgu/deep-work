@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const formatTimer = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -13,6 +13,29 @@ const BreakView = ({ duration = 300, onBreakEnd }) => {
     const targetEndTimeRef = useRef(Date.now() + duration * 1000);
     const pausedAtRef = useRef(null);
     const isProcessingEndRef = useRef(false);
+    const onBreakEndRef = useRef(onBreakEnd);
+
+    // Luôn cập nhật ref khi onBreakEnd thay đổi (tránh stale closure)
+    useEffect(() => {
+        onBreakEndRef.current = onBreakEnd;
+    }, [onBreakEnd]);
+
+    // Hàm tính toán và cập nhật thời gian còn lại
+    const syncTime = useCallback(() => {
+        if (isProcessingEndRef.current) return;
+
+        const now = Date.now();
+        const remainingMs = targetEndTimeRef.current - now;
+        const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+
+        setTimeLeft(remainingSec);
+
+        if (remainingSec <= 0 && !isProcessingEndRef.current) {
+            isProcessingEndRef.current = true;
+            console.log('⏰ Break timer kết thúc!');
+            onBreakEndRef.current();
+        }
+    }, []);
 
     // Xử lý khi pause/resume để cộng dồn thời gian
     useEffect(() => {
@@ -25,25 +48,85 @@ const BreakView = ({ duration = 300, onBreakEnd }) => {
         }
     }, [isPaused]);
 
+    // Timer chính - dùng interval 250ms để bắt kịp nhanh hơn khi tab bị throttle
     useEffect(() => {
         if (isPaused) return;
 
-        const timer = setInterval(() => {
-            const now = Date.now();
-            const remainingMs = targetEndTimeRef.current - now;
-            const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
-            
-            setTimeLeft(remainingSec);
+        // Sync ngay lập tức khi effect chạy
+        syncTime();
 
-            if (remainingSec <= 0 && !isProcessingEndRef.current) {
-                isProcessingEndRef.current = true;
-                clearInterval(timer);
-                onBreakEnd();
-            }
-        }, 1000); // Vẫn chạy mỗi 1s nhưng tính toán dựa trên thời gian thực
+        const timer = setInterval(syncTime, 250);
 
         return () => clearInterval(timer);
-    }, [isPaused, onBreakEnd]);
+    }, [isPaused, syncTime]);
+
+    // Lắng nghe visibilitychange - khi user quay lại tab, sync ngay lập tức
+    useEffect(() => {
+        if (isPaused) return;
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                console.log('👁️ Tab trở lại visible - đồng bộ timer ngay!');
+                syncTime();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [isPaused, syncTime]);
+
+    // Fallback: dùng setTimeout chain thay cho setInterval để tránh drift
+    // Khi tab bị background, setTimeout cũng bị throttle nhưng ít nhất
+    // khi nó chạy lại thì sẽ tính đúng thời gian thực
+    useEffect(() => {
+        if (isPaused) return;
+
+        // Tạo Web Worker inline để chạy timer trong background
+        // Web Worker KHÔNG bị browser throttle khi tab bị ẩn
+        const workerCode = `
+            let timerId = null;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    if (timerId) clearInterval(timerId);
+                    timerId = setInterval(() => {
+                        self.postMessage('tick');
+                    }, 1000);
+                } else if (e.data === 'stop') {
+                    if (timerId) clearInterval(timerId);
+                    timerId = null;
+                }
+            };
+        `;
+
+        let worker = null;
+        try {
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            worker = new Worker(workerUrl);
+
+            worker.onmessage = () => {
+                syncTime();
+            };
+
+            worker.postMessage('start');
+            URL.revokeObjectURL(workerUrl);
+
+            console.log('🔧 Web Worker timer đã khởi tạo thành công');
+        } catch (err) {
+            console.warn('⚠️ Không thể tạo Web Worker timer:', err);
+            // Fallback: không cần làm gì thêm vì đã có setInterval ở trên
+        }
+
+        return () => {
+            if (worker) {
+                worker.postMessage('stop');
+                worker.terminate();
+            }
+        };
+    }, [isPaused, syncTime]);
 
     const progress = ((duration - timeLeft) / duration) * 100;
 

@@ -20,8 +20,8 @@ import {
   ManualSessionModal, // NEW: Thêm thời gian thủ công
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
-import BreakView from "./components/BreakView";
 import fileStorageService from "./services/fileStorageService";
+import BreakScreen from "./components/BreakScreen";
 
 const App = () => {
   // State management
@@ -570,10 +570,7 @@ const App = () => {
   return (
     <div className="h-screen w-screen bg-slate-100 text-slate-800 antialiased overflow-hidden flex flex-col">
       {activeBreak ? (
-        <BreakView
-          duration={300}
-          onBreakEnd={handleBreakEnd}
-        />
+        <BreakScreen duration={300} onComplete={handleBreakEnd} />
       ) : !activeSession ? (
         <>
           <Header

@@ -18,6 +18,7 @@ import {
   ArchivedTasksModal,
   DailySummaryModal,
   ManualSessionModal, // NEW: Thêm thời gian thủ công
+  SettingsModal,      // NEW: Cài đặt khung thời gian
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
 import fileStorageService from "./services/fileStorageService";
@@ -50,6 +51,25 @@ const App = () => {
 
   // NEW: Daily summary state
   const [dailySummaryDate, setDailySummaryDate] = useState(null);
+
+  // NEW: Preset settings (persisted to localStorage)
+  const [presetSettings, setPresetSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('deepwork_preset_settings');
+      return saved ? JSON.parse(saved) : { sessionPresets: [25, 50, 90], targetPresets: [30, 60, 90, 120, 180] };
+    } catch {
+      return { sessionPresets: [25, 50, 90], targetPresets: [30, 60, 90, 120, 180] };
+    }
+  });
+
+  const handleSaveSettings = useCallback((newSettings) => {
+    setPresetSettings(newSettings);
+    try {
+      localStorage.setItem('deepwork_preset_settings', JSON.stringify(newSettings));
+    } catch (e) {
+      console.warn('Could not save settings to localStorage:', e);
+    }
+  }, []);
 
   // FIX: Add effect to detect when a new day starts
   useEffect(() => {
@@ -650,6 +670,15 @@ const App = () => {
             </button>
 
             <button
+              onClick={() => setModal("settings")}
+              className="bg-gray-800 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-gray-900 transition transform hover:scale-110"
+              aria-label="Cài đặt khung thời gian"
+              title="Cài đặt khung thời gian"
+            >
+              ⚙️
+            </button>
+
+            <button
               onClick={() => setModal("addTask")}
               className="bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-700 transition transform hover:scale-110"
               aria-label="Thêm task mới"
@@ -705,6 +734,7 @@ const App = () => {
           }}
           onStartSession={handleStartSession}
           onAddTask={handleAddTask}
+          sessionPresets={presetSettings.sessionPresets}
         />
       )}
 
@@ -752,6 +782,7 @@ const App = () => {
           currentTarget={Math.round(dailyTarget / 60)}
           onClose={() => setModal(null)}
           onSetTarget={handleSetDailyTarget}
+          presetTargets={presetSettings.targetPresets}
         />
       )}
 
@@ -795,6 +826,15 @@ const App = () => {
           tasks={tasks}
           onClose={() => setModal(null)}
           onSubmit={handleManualSession}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {modal === "settings" && (
+        <SettingsModal
+          settings={presetSettings}
+          onClose={() => setModal(null)}
+          onSave={handleSaveSettings}
         />
       )}
     </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 const today = () => new Date().toISOString().split('T')[0];
 
-export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
+export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget, presetTargets }) => {
     const [target, setTarget] = useState(currentTarget || 60);
 
     const handleSubmit = (e) => {
@@ -12,7 +12,7 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
         }
     };
 
-    const presetTargets = [30, 60, 90, 120, 180];
+    const presets = presetTargets || [30, 60, 90, 120, 180];
 
     return (
         <div className="modal-container fixed inset-0 z-30 flex items-end show">
@@ -25,7 +25,7 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
                 <form onSubmit={handleSubmit}>
                     {/* Preset Targets */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                        {presetTargets.map(minutes => (
+                        {presets.map(minutes => (
                             <button
                                 key={minutes}
                                 type="button"
@@ -83,15 +83,16 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget }) => {
     );
 };
 
-export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
+export const TaskModal = ({ task, onClose, onStartSession, onAddTask, sessionPresets }) => {
+    const defaultPresets = sessionPresets || [25, 50, 90];
     const [name, setName] = useState('');
-    const [duration, setDuration] = useState(25);
+    const [duration, setDuration] = useState(defaultPresets[0] || 25);
     const [isFreeMode, setIsFreeMode] = useState(false);
 
     useEffect(() => {
         if (task) {
             setName(task.name);
-            setDuration(task.defaultDuration || 25);
+            setDuration(task.defaultDuration || defaultPresets[0] || 25);
             setIsFreeMode(false);
         }
     }, [task]);
@@ -137,7 +138,7 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask }) => {
                         disabled={!!task}
                     />
                     <div className="flex items-center space-x-2 mb-4">
-                        {[25, 50, 90].map(d => (
+                        {defaultPresets.map(d => (
                             <button
                                 key={d}
                                 type="button"
@@ -707,6 +708,140 @@ export const ManualSessionModal = ({ tasks, onClose, onSubmit }) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    );
+};
+
+// Settings Modal - Chỉnh sửa khung thời gian mặc định
+export const SettingsModal = ({ onClose, settings, onSave }) => {
+    const [sessionPresets, setSessionPresets] = useState(
+        (settings?.sessionPresets || [25, 50, 90]).join(', ')
+    );
+    const [targetPresets, setTargetPresets] = useState(
+        (settings?.targetPresets || [30, 60, 90, 120, 180]).join(', ')
+    );
+    const [sessionError, setSessionError] = useState('');
+    const [targetError, setTargetError] = useState('');
+
+    const parsePresets = (str, min, max, maxCount) => {
+        const arr = str.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n >= min && n <= max);
+        if (arr.length === 0) return null;
+        if (arr.length > maxCount) return null;
+        return [...new Set(arr)].sort((a, b) => a - b);
+    };
+
+    const handleSave = () => {
+        let hasError = false;
+
+        const parsedSession = parsePresets(sessionPresets, 1, 480, 5);
+        if (!parsedSession) {
+            setSessionError('Nhập tối đa 5 số từ 1–480 phút, cách nhau bằng dấu phẩy');
+            hasError = true;
+        } else {
+            setSessionError('');
+        }
+
+        const parsedTarget = parsePresets(targetPresets, 1, 1440, 6);
+        if (!parsedTarget) {
+            setTargetError('Nhập tối đa 6 số từ 1–1440 phút, cách nhau bằng dấu phẩy');
+            hasError = true;
+        } else {
+            setTargetError('');
+        }
+
+        if (hasError) return;
+
+        onSave({ sessionPresets: parsedSession, targetPresets: parsedTarget });
+        onClose();
+    };
+
+    const resetToDefault = () => {
+        setSessionPresets('25, 50, 90');
+        setTargetPresets('30, 60, 90, 120, 180');
+        setSessionError('');
+        setTargetError('');
+    };
+
+    return (
+        <div className="modal-container fixed inset-0 z-30 flex items-end show">
+            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">⚙️ Cài đặt khung thời gian</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
+                </div>
+
+                {/* Session Presets */}
+                <div className="mb-5">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        ⏱️ Khung thời gian phiên làm việc (phút)
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">Tối đa 5 giá trị, cách nhau bằng dấu phẩy. Ví dụ: 25, 50, 90</p>
+                    <input
+                        type="text"
+                        value={sessionPresets}
+                        onChange={(e) => { setSessionPresets(e.target.value); setSessionError(''); }}
+                        placeholder="25, 50, 90"
+                        className={`w-full py-2.5 px-3 text-base font-semibold rounded-lg border-2 focus:ring-2 focus:ring-gray-400 ${
+                            sessionError ? 'border-red-400 bg-red-50' : 'border-black bg-white'
+                        }`}
+                    />
+                    {sessionError && <p className="text-xs text-red-500 mt-1">⚠️ {sessionError}</p>}
+                    {/* Live preview */}
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                        {(parsePresets(sessionPresets, 1, 480, 5) || []).map(v => (
+                            <span key={v} className="px-2.5 py-1 text-xs font-bold bg-black text-white rounded-full">{v}p</span>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Target Presets */}
+                <div className="mb-5">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        🎯 Khung mục tiêu hàng ngày (phút)
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">Tối đa 6 giá trị, cách nhau bằng dấu phẩy. Ví dụ: 30, 60, 90, 120, 180</p>
+                    <input
+                        type="text"
+                        value={targetPresets}
+                        onChange={(e) => { setTargetPresets(e.target.value); setTargetError(''); }}
+                        placeholder="30, 60, 90, 120, 180"
+                        className={`w-full py-2.5 px-3 text-base font-semibold rounded-lg border-2 focus:ring-2 focus:ring-gray-400 ${
+                            targetError ? 'border-red-400 bg-red-50' : 'border-black bg-white'
+                        }`}
+                    />
+                    {targetError && <p className="text-xs text-red-500 mt-1">⚠️ {targetError}</p>}
+                    {/* Live preview */}
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                        {(parsePresets(targetPresets, 1, 1440, 6) || []).map(v => (
+                            <span key={v} className="px-2.5 py-1 text-xs font-bold bg-gray-800 text-white rounded-full">{v}p</span>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex space-x-3">
+                    <button
+                        type="button"
+                        onClick={resetToDefault}
+                        className="py-3 px-4 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors text-sm"
+                    >
+                        Mặc định
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex-1 py-3 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors"
+                    >
+                        Hủy
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        className="flex-1 py-3 font-bold rounded-lg border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors"
+                    >
+                        Lưu ✅
+                    </button>
+                </div>
             </div>
         </div>
     );

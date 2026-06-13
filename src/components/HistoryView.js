@@ -692,7 +692,7 @@ const HistoryView = ({
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <h2 className="text-lg font-semibold text-gray-900">
-              {viewMode === "overview" ? "🌐 Tổng quan" : `📊 Thống kê ${getFilterText(filter)}`}
+              {viewMode === "overview" ? "🌐 Tổng quan" : viewMode === "timeline" ? `🕒 Dòng thời gian ${getFilterText(filter)}` : `📊 Thống kê ${getFilterText(filter)}`}
             </h2>
 
             {/* View Mode Toggle - Wireframe Style */}
@@ -716,6 +716,15 @@ const HistoryView = ({
                   🔥
                 </button>
               )}
+
+              <button
+                onClick={() => setViewMode("timeline")}
+                className={`px-3 py-1 text-sm font-medium transition-colors border-l-2 border-black ${viewMode === "timeline" ? "bg-black text-white" : "bg-white text-gray-900 hover:bg-gray-100"
+                  }`}
+                title="Dòng thời gian"
+              >
+                🕒
+              </button>
 
               <button
                 onClick={() => setViewMode("overview")}
@@ -881,6 +890,52 @@ const HistoryView = ({
                     </div>
                   </div>
                 </>
+              ) : viewMode === "timeline" ? (
+                <div className="py-2 max-h-[300px] overflow-y-auto">
+                  <div className="relative border-l-2 border-black ml-3 pl-5 space-y-4 my-2">
+                    {[...sessions]
+                      .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+                      .map((session, index) => {
+                        const task = tasks.find((t) => t.id === session.taskId);
+                        const taskName = task ? task.name : "Task đã xóa";
+                        const endTime = new Date(session.completedAt);
+                        const startTime = new Date(
+                          endTime.getTime() - session.duration * 1000
+                        );
+                        const formatTime = (d) =>
+                          d.toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          });
+
+                        const formatDateLabel = (d) => {
+                          if (filter === "day") return "";
+                          return d.toLocaleDateString("vi-VN", {
+                            weekday: "short",
+                            day: "2-digit",
+                            month: "2-digit",
+                          }) + " • ";
+                        };
+
+                        return (
+                          <div key={session.id || index} className="relative">
+                            <div className="absolute w-3 h-3 bg-black rounded-full -left-[27px] top-1.5 border-2 border-white shadow"></div>
+                            <div className="bg-white rounded-lg p-3 border-2 border-black">
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="font-bold text-gray-900">{taskName}</span>
+                                <span className="text-xs font-bold bg-black text-white px-2 py-0.5 rounded">
+                                  {Math.round(session.duration / 60)}p
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500 font-semibold">
+                                {formatDateLabel(endTime)}{formatTime(startTime)} - {formatTime(endTime)}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
               ) : (
                 <div className="py-2">
                   <FocusHeatmap
@@ -895,14 +950,14 @@ const HistoryView = ({
           ) : (
             <div className="text-center py-12 text-gray-500">
               <div className="text-5xl mb-3">
-                {viewMode === "heatmap" ? "🔥" : "📈"}
+                {viewMode === "heatmap" ? "🔥" : viewMode === "timeline" ? "🕒" : "📈"}
               </div>
               <h3 className="text-lg font-medium text-gray-700 mb-2">
                 Chưa có dữ liệu {getFilterText(filter)}
               </h3>
               <p className="text-sm">
                 Bắt đầu một phiên làm việc để xem{" "}
-                {viewMode === "heatmap" ? "heatmap" : "thống kê"} tại đây
+                {viewMode === "heatmap" ? "heatmap" : viewMode === "timeline" ? "dòng thời gian" : "thống kê"} tại đây
               </p>
             </div>
           )}

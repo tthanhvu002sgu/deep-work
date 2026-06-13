@@ -262,6 +262,8 @@ export const ErrorModal = ({ error, onClose, onRetry }) => (
 
 // NEW: Daily Summary Modal
 export const DailySummaryModal = ({ date, sessions, tasks, dailyTarget, onClose }) => {
+    const [activeTab, setActiveTab] = useState('overview');
+
     const totalMinutes = Math.round(sessions.reduce((acc, s) => acc + s.duration, 0) / 60);
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = totalMinutes % 60;
@@ -297,7 +299,7 @@ export const DailySummaryModal = ({ date, sessions, tasks, dailyTarget, onClose 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
             <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="text-center mb-6">
+                <div className="text-center mb-4">
                     <div className="text-5xl mb-3">
                         {targetAchieved ? '🎉' : sessions.length > 0 ? '📊' : '😴'}
                     </div>
@@ -307,73 +309,126 @@ export const DailySummaryModal = ({ date, sessions, tasks, dailyTarget, onClose 
                     <p className="text-sm text-gray-600">{formatDate(date)}</p>
                 </div>
 
-                {/* Stats */}
+                {sessions.length > 0 && (
+                    <div className="flex border-b-2 border-gray-100 mb-4">
+                        <button
+                            className={`flex-1 py-2 font-semibold text-sm transition-colors ${activeTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            onClick={() => setActiveTab('overview')}
+                        >
+                            Tổng quan
+                        </button>
+                        <button
+                            className={`flex-1 py-2 font-semibold text-sm transition-colors ${activeTab === 'timeline' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            onClick={() => setActiveTab('timeline')}
+                        >
+                            Dòng thời gian
+                        </button>
+                    </div>
+                )}
+
+                {/* Content */}
                 {sessions.length > 0 ? (
                     <div className="space-y-4 mb-6">
-                        {/* Total Time */}
-                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
-                            <div className="text-sm text-gray-600 mb-1">⏱️ Tổng thời gian tập trung</div>
-                            <div className="text-3xl font-bold text-blue-600">
-                                {totalHours > 0 ? `${totalHours}h ${remainingMinutes}p` : `${totalMinutes}p`}
-                            </div>
-                        </div>
+                        {activeTab === 'overview' ? (
+                            <>
+                                {/* Total Time */}
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
+                                    <div className="text-sm text-gray-600 mb-1">⏱️ Tổng thời gian tập trung</div>
+                                    <div className="text-3xl font-bold text-blue-600">
+                                        {totalHours > 0 ? `${totalHours}h ${remainingMinutes}p` : `${totalMinutes}p`}
+                                    </div>
+                                </div>
 
-                        {/* Target Progress */}
-                        {dailyTarget > 0 && (
-                            <div className="bg-gray-50 rounded-xl p-4">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm text-gray-600">🎯 Mục tiêu hôm nay</span>
-                                    <span className={`text-sm font-semibold ${targetAchieved ? 'text-green-600' : 'text-orange-600'}`}>
-                                        {completionRate}%
-                                    </span>
+                                {/* Target Progress */}
+                                {dailyTarget > 0 && (
+                                    <div className="bg-gray-50 rounded-xl p-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm text-gray-600">🎯 Mục tiêu hôm nay</span>
+                                            <span className={`text-sm font-semibold ${targetAchieved ? 'text-green-600' : 'text-orange-600'}`}>
+                                                {completionRate}%
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div
+                                                className={`h-2 transition-all duration-500 ${targetAchieved ? 'bg-green-500' : 'bg-orange-500'}`}
+                                                style={{ width: `${Math.min(completionRate, 100)}%` }}
+                                            />
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {totalMinutes} / {dailyTarget} phút
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Sessions Count */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="bg-green-50 rounded-lg p-3 text-center">
+                                        <div className="text-2xl font-bold text-green-600">{sessions.length}</div>
+                                        <div className="text-xs text-gray-600">Phiên hoàn thành</div>
+                                    </div>
+                                    <div className="bg-purple-50 rounded-lg p-3 text-center">
+                                        <div className="text-2xl font-bold text-purple-600">
+                                            {new Set(sessions.map(s => s.taskId)).size}
+                                        </div>
+                                        <div className="text-xs text-gray-600">Tasks khác nhau</div>
+                                    </div>
                                 </div>
-                                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-2 transition-all duration-500 ${targetAchieved ? 'bg-green-500' : 'bg-orange-500'}`}
-                                        style={{ width: `${Math.min(completionRate, 100)}%` }}
-                                    />
+
+                                {/* Top Task */}
+                                {topTask && (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                        <div className="text-xs text-gray-600 mb-1">🏆 Task nổi bật nhất</div>
+                                        <div className="font-semibold text-gray-800">{topTask.name}</div>
+                                        <div className="text-sm text-gray-600">{topTaskMinutes} phút</div>
+                                    </div>
+                                )}
+
+                                {/* Achievement Message */}
+                                <div className="text-center p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white">
+                                    <p className="text-sm font-medium">
+                                        {targetAchieved
+                                            ? '🌟 Bạn đã hoàn thành mục tiêu hôm nay! Tuyệt vời!'
+                                            : completionRate >= 75
+                                                ? '💪 Chỉ còn chút nữa thôi! Cố lên!'
+                                                : sessions.length > 0
+                                                    ? '👍 Mỗi bước nhỏ đều quan trọng. Ngày mai cố gắng hơn nhé!'
+                                                    : '🎯 Hãy đặt mục tiêu cho ngày mai!'}
+                                    </p>
                                 </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    {totalMinutes} / {dailyTarget} phút
+                            </>
+                        ) : (
+                            <>
+                                {/* Timeline */}
+                                <div className="pt-2">
+                                    <div className="relative border-l-2 border-blue-200 ml-3 pl-5 space-y-4">
+                                        {[...sessions].sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)).map((session, index) => {
+                                            const task = tasks.find(t => t.id === session.taskId);
+                                            const taskName = task ? task.name : 'Task đã xóa';
+                                            const endTime = new Date(session.completedAt);
+                                            const startTime = new Date(endTime.getTime() - session.duration * 1000);
+                                            const formatTime = (d) => d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                                            
+                                            return (
+                                                <div key={session.id || index} className="relative">
+                                                    <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[27px] top-1.5 border-2 border-white shadow"></div>
+                                                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 shadow-sm">
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className="font-semibold text-gray-800">{taskName}</span>
+                                                            <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                                                                {Math.round(session.duration / 60)}p
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-500">
+                                                            {formatTime(startTime)} - {formatTime(endTime)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
+                            </>
                         )}
-
-                        {/* Sessions Count */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-green-50 rounded-lg p-3 text-center">
-                                <div className="text-2xl font-bold text-green-600">{sessions.length}</div>
-                                <div className="text-xs text-gray-600">Phiên hoàn thành</div>
-                            </div>
-                            <div className="bg-purple-50 rounded-lg p-3 text-center">
-                                <div className="text-2xl font-bold text-purple-600">
-                                    {new Set(sessions.map(s => s.taskId)).size}
-                                </div>
-                                <div className="text-xs text-gray-600">Tasks khác nhau</div>
-                            </div>
-                        </div>
-
-                        {/* Top Task */}
-                        {topTask && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                <div className="text-xs text-gray-600 mb-1">🏆 Task nổi bật nhất</div>
-                                <div className="font-semibold text-gray-800">{topTask.name}</div>
-                                <div className="text-sm text-gray-600">{topTaskMinutes} phút</div>
-                            </div>
-                        )}
-
-                        {/* Achievement Message */}
-                        <div className="text-center p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl text-white">
-                            <p className="text-sm font-medium">
-                                {targetAchieved
-                                    ? '🌟 Bạn đã hoàn thành mục tiêu hôm nay! Tuyệt vời!'
-                                    : completionRate >= 75
-                                        ? '💪 Chỉ còn chút nữa thôi! Cố lên!'
-                                        : sessions.length > 0
-                                            ? '👍 Mỗi bước nhỏ đều quan trọng. Ngày mai cố gắng hơn nhé!'
-                                            : '🎯 Hãy đặt mục tiêu cho ngày mai!'}
-                            </p>
-                        </div>
                     </div>
                 ) : (
                     <div className="text-center py-8 mb-6">

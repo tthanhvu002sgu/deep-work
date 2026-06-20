@@ -17,8 +17,10 @@ import {
   ConfirmArchiveModal,
   ArchivedTasksModal,
   DailySummaryModal,
-  ManualSessionModal, // NEW: Thêm thời gian thủ công
-  SettingsModal,      // NEW: Cài đặt khung thời gian
+  ManualSessionModal,
+  SettingsModal,
+  WeeklyScheduleModal, // NEW
+  AddWeeklyTaskModal,  // NEW
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
 import fileStorageService from "./services/fileStorageService";
@@ -28,6 +30,7 @@ const App = () => {
   // State management
   const [tasks, setTasks] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [weeklyTasks, setWeeklyTasks] = useState([]); // NEW: Weekly schedule tasks
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dailyTarget, setDailyTarget] = useState(0);
@@ -48,6 +51,10 @@ const App = () => {
   const [currentDateKey, setCurrentDateKey] = useState(
     new Date().toDateString()
   );
+  
+  // NEW: State for weekly task addition
+  const [weeklyDayToAdd, setWeeklyDayToAdd] = useState(0);
+  const [upcomingWeeklyTasks, setUpcomingWeeklyTasks] = useState([]);
 
   // NEW: Daily summary state
   const [dailySummaryDate, setDailySummaryDate] = useState(null);
@@ -89,23 +96,26 @@ const App = () => {
     const loadApp = async () => {
       setLoading(true);
       try {
-        const [tasksData, sessionsData, targetData, archivedData] = await Promise.all([
+        const [tasksData, sessionsData, targetData, archivedData, weeklyData] = await Promise.all([
           fileStorageService.getTasks(),
           fileStorageService.getSessions(),
           fileStorageService.getDailyTarget(),
-          fileStorageService.getArchivedTasks(), // NEW
+          fileStorageService.getArchivedTasks(),
+          fileStorageService.getWeeklyTasks(), // NEW
         ]);
 
         setTasks(tasksData);
         setSessions(sessionsData);
         setDailyTarget(targetData.targetMinutes * 60);
-        setArchivedTasks(archivedData); // NEW
+        setArchivedTasks(archivedData);
+        setWeeklyTasks(weeklyData); // NEW
 
         console.log('Initial data loaded:', {
           tasks: tasksData.length,
           sessions: sessionsData.length,
           target: targetData.targetMinutes,
-          archived: archivedData.length, // NEW
+          archived: archivedData.length,
+          weeklyTasks: weeklyData.length, // NEW
         });
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -583,6 +593,104 @@ const App = () => {
     }
   }, []);
 
+  // NEW: Weekly Task Handlers
+  const handleAddWeeklyTask = useCallback(async (dayOfWeek, time, name) => {
+    try {
+      const newTask = await fileStorageService.addWeeklyTask(dayOfWeek, time, name);
+      setWeeklyTasks(prev => [...prev, newTask]);
+      setModal("weeklySchedule"); // Go back to schedule modal
+    } catch (error) {
+      console.error("Error adding weekly task:", error);
+      setError("Không thể thêm task tuần: " + error.message);
+      setModal("error");
+    }
+  }, []);
+
+  const handleDeleteWeeklyTask = useCallback(async (taskId) => {
+    try {
+      await fileStorageService.deleteWeeklyTask(taskId);
+      setWeeklyTasks(prev => prev.filter(t => t.id !== taskId));
+    } catch (error) {
+      console.error("Error deleting weekly task:", error);
+      setError("Không thể xóa task tuần: " + error.message);
+      setModal("error");
+    }
+  }, []);
+
+  // Helper to format remaining time
+  const formatRemainingTime = (diffMs) => {
+    if (diffMs < 0) return "Đã qua";
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes === 0) return "Sắp bắt đầu!";
+    if (minutes < 60) return `Còn ${minutes} phút`;
+    const hours = Math.floor(minutes / 60);
+    const remainMin = minutes % 60;
+    return `Còn ${hours} giờ ${remainMin} phút`;
+  };
+
+  // Check upcoming weekly tasks
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const checkUpcomingTasks = () => {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 is Sunday, 1-6 is Mon-Sat
+      
+      const todaysTasks = weeklyTasks.filter(t => t.dayOfWeek === currentDay);
+      if (todaysTasks.length === 0) {
+        setUpcomingWeeklyTasks([]);
+        return;
+      }
+
+      const upcoming = todaysTasks.map(task => {
+        const [hours, minutes] = task.time.split(':').map(Number);
+        const taskTime = new Date();
+        taskTime.setHours(hours, minutes, 0, 0);
+        
+        const diffMs = taskTime - now;
+        
+        // Notify if it's exactly the minute
+        // This runs every 10s, so we check if diff is between 0 and 10s
+        if (diffMs > 0 && diffMs <= 10000) {
+           if ('Notification' in window && Notification.permission === 'granted') {
+             new Notification('Đến giờ!', {
+               body: task.name,
+             });
+           }
+           try {
+             const audio = new Audio(`${process.env.PUBLIC_URL}/noti2.mp3`);
+             audio.volume = 0.7;
+             audio.play();
+           } catch (err) {
+             console.warn("Could not play notification audio:", err);
+           }
+        }
+        
+        return {
+          ...task,
+          diffMs,
+          remainingText: formatRemainingTime(diffMs),
+          isPast: diffMs < 0,
+          isActive: diffMs >= -60000 && diffMs <= 0 // Just triggered within 1 min
+        };
+      }).sort((a, b) => {
+        // Sort future tasks by time remaining, then past tasks
+        if (a.diffMs >= 0 && b.diffMs >= 0) return a.diffMs - b.diffMs;
+        if (a.diffMs < 0 && b.diffMs < 0) return b.diffMs - a.diffMs; // Most recent past first
+        return a.diffMs >= 0 ? -1 : 1;
+      });
+
+      setUpcomingWeeklyTasks(upcoming);
+    };
+
+    checkUpcomingTasks();
+    const interval = setInterval(checkUpcomingTasks, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [weeklyTasks]);
+
   const handleBreakEnd = useCallback(() => {
     setActiveBreak(false);
   }, []);
@@ -613,6 +721,28 @@ const App = () => {
               </div>
             )}
 
+            {/* NEW: Upcoming Tasks Banner */}
+            {upcomingWeeklyTasks.length > 0 && (
+              <div className="mb-4 bg-white rounded-xl p-4 shadow-sm border-2 border-black">
+                <h3 className="font-bold text-lg mb-2 flex items-center">
+                  <span className="mr-2">📅</span> Lịch trình hôm nay
+                </h3>
+                <div className="space-y-2">
+                  {upcomingWeeklyTasks.map(task => (
+                    <div key={task.id} className={`flex justify-between items-center p-2 rounded-lg border-2 ${task.isActive ? 'border-red-500 bg-red-50 animate-pulse' : task.isPast ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-blue-200 bg-blue-50'}`}>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-gray-900">{task.time}</span>
+                        <span className="text-sm text-gray-700">{task.name}</span>
+                      </div>
+                      <div className={`font-semibold text-sm px-2 py-1 rounded ${task.isActive ? 'text-red-700 bg-red-100' : task.isPast ? 'text-gray-500' : 'text-blue-700 bg-blue-100'}`}>
+                        {task.remainingText}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <HistoryView
               sessions={filteredSessions}
               tasks={tasks}
@@ -635,6 +765,16 @@ const App = () => {
 
           {/* Floating Action Buttons */}
           <div className="fixed bottom-6 right-6 flex flex-col space-y-3 z-20">
+            {/* NEW: Schedule Button */}
+            <button
+              onClick={() => setModal("weeklySchedule")}
+              className="bg-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition transform hover:scale-110"
+              aria-label="Thời khóa biểu"
+              title="Thời khóa biểu tuần"
+            >
+              📅
+            </button>
+
             {/* NEW: Archived Tasks Button */}
             {archivedTasks.length > 0 && (
               <button
@@ -835,6 +975,27 @@ const App = () => {
           settings={presetSettings}
           onClose={() => setModal(null)}
           onSave={handleSaveSettings}
+        />
+      )}
+
+      {/* NEW: Weekly Schedule Modals */}
+      {modal === "weeklySchedule" && (
+        <WeeklyScheduleModal
+          weeklyTasks={weeklyTasks}
+          onClose={() => setModal(null)}
+          onAddTask={(dayId) => {
+            setWeeklyDayToAdd(dayId);
+            setModal("addWeeklyTask");
+          }}
+          onDeleteTask={handleDeleteWeeklyTask}
+        />
+      )}
+
+      {modal === "addWeeklyTask" && (
+        <AddWeeklyTaskModal
+          dayOfWeek={weeklyDayToAdd}
+          onClose={() => setModal("weeklySchedule")}
+          onSave={handleAddWeeklyTask}
         />
       )}
     </div>

@@ -38,6 +38,7 @@ class FileStorageService {
         autoStartBreaks: false,
         darkMode: false
       },
+      weeklyTasks: [],
       metadata: {
         created: new Date().toISOString(),
         version: '1.0.0',
@@ -84,14 +85,16 @@ class FileStorageService {
       const sessions = JSON.parse(localStorage.getItem('deepwork_sessions_v3') || '[]');
       const dailyTargets = JSON.parse(localStorage.getItem('deepwork_daily_targets') || '{}');
       const settings = JSON.parse(localStorage.getItem('deepwork_settings') || '{}');
+      const weeklyTasks = JSON.parse(localStorage.getItem('deepwork_weekly_tasks') || '[]');
       const metadata = JSON.parse(localStorage.getItem('deepwork_metadata') || '{}');
       
-      if (tasks.length > 0 || sessions.length > 0) {
+      if (tasks.length > 0 || sessions.length > 0 || weeklyTasks.length > 0) {
         return {
           tasks,
           sessions,
           dailyTargets,
           settings: { ...this.getInitialData().settings, ...settings },
+          weeklyTasks,
           metadata: { ...this.getInitialData().metadata, ...metadata }
         };
       }
@@ -116,6 +119,7 @@ class FileStorageService {
       localStorage.setItem('deepwork_sessions_v3', JSON.stringify(dataToSave.sessions));
       localStorage.setItem('deepwork_daily_targets', JSON.stringify(dataToSave.dailyTargets));
       localStorage.setItem('deepwork_settings', JSON.stringify(dataToSave.settings));
+      localStorage.setItem('deepwork_weekly_tasks', JSON.stringify(dataToSave.weeklyTasks));
       localStorage.setItem('deepwork_metadata', JSON.stringify(dataToSave.metadata));
       
       console.log('💾 Đã lưu vào localStorage');
@@ -294,6 +298,39 @@ class FileStorageService {
 
     await this.saveData(); // Tự động lưu sau khi đặt mục tiêu
     return this.data.dailyTargets[targetDate];
+  }
+
+  // Weekly Tasks operations
+  async getWeeklyTasks() {
+    return this.data.weeklyTasks || [];
+  }
+
+  async addWeeklyTask(dayOfWeek, time, name) {
+    if (!this.data.weeklyTasks) {
+      this.data.weeklyTasks = [];
+    }
+
+    const newTask = {
+      id: Date.now(),
+      dayOfWeek, // 0 (Sunday) to 6 (Saturday)
+      time, // format "HH:MM"
+      name,
+      createdAt: new Date().toISOString()
+    };
+
+    this.data.weeklyTasks.push(newTask);
+    await this.saveData();
+    console.log('📅 Đã thêm task tuần:', newTask);
+    return newTask;
+  }
+
+  async deleteWeeklyTask(taskId) {
+    if (!this.data.weeklyTasks) return false;
+    
+    this.data.weeklyTasks = this.data.weeklyTasks.filter(task => task.id !== taskId);
+    await this.saveData();
+    console.log('🗑️ Đã xóa task tuần:', taskId);
+    return true;
   }
 
   // NEW: Chọn file đích để đồng bộ (File System Access API)

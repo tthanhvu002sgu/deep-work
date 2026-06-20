@@ -901,3 +901,137 @@ export const SettingsModal = ({ onClose, settings, onSave }) => {
         </div>
     );
 };
+
+// NEW: Weekly Schedule Modal
+export const WeeklyScheduleModal = ({ weeklyTasks, onClose, onAddTask, onDeleteTask }) => {
+    const days = [
+        { id: 1, name: 'Thứ 2' },
+        { id: 2, name: 'Thứ 3' },
+        { id: 3, name: 'Thứ 4' },
+        { id: 4, name: 'Thứ 5' },
+        { id: 5, name: 'Thứ 6' },
+        { id: 6, name: 'Thứ 7' },
+        { id: 0, name: 'Chủ Nhật' },
+    ];
+
+    // Sort tasks by time
+    const getTasksForDay = (dayId) => {
+        return weeklyTasks
+            .filter(t => t.dayOfWeek === dayId)
+            .sort((a, b) => a.time.localeCompare(b.time));
+    };
+
+    return (
+        <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl border-2 border-black overflow-hidden">
+                <div className="p-4 border-b-2 border-black flex justify-between items-center bg-gray-50">
+                    <h3 className="text-2xl font-bold text-gray-900">📅 Thời khóa biểu tuần</h3>
+                    <button onClick={onClose} className="text-2xl font-bold text-gray-500 hover:text-black">✕</button>
+                </div>
+                
+                <div className="flex-1 overflow-x-auto overflow-y-auto p-4 bg-gray-100">
+                    <div className="flex gap-4 min-w-[1000px] h-full">
+                        {days.map(day => (
+                            <div key={day.id} className="flex-1 min-w-[140px] bg-white rounded-xl border-2 border-black flex flex-col overflow-hidden">
+                                <div className="bg-black text-white text-center py-2 font-bold border-b-2 border-black">
+                                    {day.name}
+                                </div>
+                                <div className="p-2 flex-1 overflow-y-auto space-y-2 bg-slate-50">
+                                    {getTasksForDay(day.id).map(task => (
+                                        <div key={task.id} className="bg-white border-2 border-black rounded-lg p-2 shadow-sm relative group hover:bg-gray-50 transition-colors flex flex-col items-center">
+                                            <div className="text-xs font-bold text-blue-600 mb-1">{task.time}</div>
+                                            <div className="text-sm font-semibold text-gray-800 break-words text-center">{task.name}</div>
+                                            <button 
+                                                onClick={() => onDeleteTask(task.id)}
+                                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity font-bold"
+                                                title="Xóa"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button 
+                                        onClick={() => onAddTask(day.id)}
+                                        className="w-full py-2 border-2 border-dashed border-gray-400 text-gray-500 rounded-lg font-semibold hover:border-black hover:text-black hover:bg-gray-100 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <span className="text-lg leading-none">+</span> Thêm
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// NEW: Add Weekly Task Modal
+export const AddWeeklyTaskModal = ({ dayOfWeek, onClose, onSave }) => {
+    const [name, setName] = useState('');
+    const [time, setTime] = useState('08:00');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const days = ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim() || !time) return;
+
+        setIsSaving(true);
+        try {
+            await onSave(dayOfWeek, time, name.trim());
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border-2 border-black">
+                <h3 className="text-lg font-bold mb-4 text-center">Thêm task {days[dayOfWeek]}</h3>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Thời gian</label>
+                        <input
+                            type="time"
+                            value={time}
+                            onChange={(e) => setTime(e.target.value)}
+                            className="w-full p-2 border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 text-lg font-semibold"
+                            required
+                        />
+                    </div>
+                    <div className="mb-6">
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Tên task</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Nhập tên task..."
+                            className="w-full p-2 border-2 border-black rounded-lg focus:ring-2 focus:ring-gray-400 font-semibold"
+                            required
+                            autoFocus
+                        />
+                    </div>
+                    <div className="flex space-x-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 py-2 font-semibold bg-white border-2 border-black text-gray-900 rounded-lg hover:bg-gray-100"
+                            disabled={isSaving}
+                        >
+                            Hủy
+                        </button>
+                        <button
+                            type="submit"
+                            className="flex-1 py-2 font-bold bg-black text-white border-2 border-black rounded-lg hover:bg-gray-800 disabled:bg-gray-500"
+                            disabled={isSaving || !name.trim()}
+                        >
+                            {isSaving ? 'Đang lưu...' : 'Lưu'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};

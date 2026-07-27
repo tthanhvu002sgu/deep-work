@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-
-const today = () => new Date().toISOString().split('T')[0];
+import { getSessionScienceMeta } from '../utils/scienceConfig';
 
 export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget, presetTargets }) => {
     const [target, setTarget] = useState(currentTarget || 60);
@@ -19,7 +18,7 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget, presetTa
             <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
                 <h3 className="text-lg font-bold mb-3 text-center text-gray-900">🎯 Đặt mục tiêu hôm nay</h3>
                 <p className="text-sm text-gray-600 text-center mb-4">
-                    Đặt mục tiêu thời gian tập trung cho ngày hôm nay
+                    Đặt mục tiêu thời gian tập trung cho ngày hôm nay (Tối đa khuyến nghị khoa học: 4 tiếng/ngày)
                 </p>
 
                 <form onSubmit={handleSubmit}>
@@ -59,6 +58,7 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget, presetTa
                     <div className="mb-4 p-3 bg-gray-100 rounded-lg border-2 border-black">
                         <p className="text-sm text-gray-700 text-center">
                             📊 Mục tiêu: <span className="font-semibold">{target} phút tập trung</span>
+                            {target >= 240 && <span className="block text-xs font-bold text-red-600 mt-1">⚠️ Mục tiêu vượt ngưỡng 4 tiếng Deep Work tối đa trong ngày</span>}
                         </p>
                     </div>
 
@@ -85,6 +85,13 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget, presetTa
 
 export const TaskModal = ({ task, onClose, onStartSession, onAddTask, sessionPresets }) => {
     const defaultPresets = sessionPresets || [25, 50, 90];
+    const sciencePresets = [
+        { minutes: 90, label: '90p', category: 'Deep Work', icon: '🧠', breakMin: 20 },
+        { minutes: 50, label: '50p', category: 'Deep Work', icon: '🧠', breakMin: 15 },
+        { minutes: 30, label: '30p', category: 'Vừa sức', icon: '⚡', breakMin: 10 },
+        { minutes: 25, label: '25p', category: 'Ngắn', icon: '🌱', breakMin: 5 },
+    ];
+
     const [name, setName] = useState('');
     const [duration, setDuration] = useState(defaultPresets[0] || 25);
     const [isFreeMode, setIsFreeMode] = useState(false);
@@ -109,8 +116,10 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask, sessionPre
 
     const handleCustomDurationChange = (e) => {
         const value = Number(e.target.value);
-        setDuration(value);
-        setIsFreeMode(false);
+        if (value > 0) {
+            setDuration(value);
+            setIsFreeMode(false);
+        }
     };
 
     const handleSubmit = (e) => {
@@ -123,61 +132,100 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask, sessionPre
         }
     };
 
+    const activeScienceMeta = getSessionScienceMeta(isFreeMode ? 0 : duration);
+
     return (
         <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
-                <h3 className="text-lg font-bold mb-3 text-center text-gray-900">{task ? 'Bắt đầu phiên làm việc' : 'Thêm Task Mới'}</h3>
+            <div className="modal-content w-full bg-white rounded-t-2xl p-5 shadow-2xl border-t-2 border-x-2 border-black max-w-lg mx-auto">
+                <h3 className="text-xl font-bold mb-3 text-center text-gray-900">
+                    {task ? '🚀 Bắt đầu phiên làm việc' : '➕ Thêm Task Mới'}
+                </h3>
                 <form onSubmit={handleSubmit}>
                     <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="✏️ Nhập tên công việc..."
-                        className="w-full text-lg font-semibold border-2 border-black focus:ring-2 focus:ring-gray-400 p-2 mb-3 rounded-lg"
+                        className="w-full text-lg font-semibold border-2 border-black focus:ring-2 focus:ring-gray-400 p-2.5 mb-4 rounded-xl"
                         required
                         disabled={!!task}
                     />
-                    <div className="flex items-center space-x-2 mb-4">
-                        {defaultPresets.map(d => (
+
+                    {/* Science Session Selection Cards */}
+                    <div className="mb-3">
+                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                            ⏱️ Chọn khung thời gian khoa học:
+                        </label>
+                        <div className="grid grid-cols-4 gap-2 mb-2">
+                            {sciencePresets.map((item) => (
+                                <button
+                                    key={item.minutes}
+                                    type="button"
+                                    onClick={() => handleDurationSelect(item.minutes)}
+                                    className={`p-2 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${
+                                        !isFreeMode && duration === item.minutes
+                                            ? 'border-black bg-black text-white shadow-md scale-[1.02]'
+                                            : 'border-black bg-white text-gray-900 hover:bg-gray-100'
+                                    }`}
+                                >
+                                    <span className="text-xs">{item.icon}</span>
+                                    <span className="text-base font-bold">{item.minutes}p</span>
+                                    <span className={`text-[10px] ${!isFreeMode && duration === item.minutes ? 'text-gray-300' : 'text-gray-500'}`}>
+                                        Nghỉ {item.breakMin}p
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-2">
                             <button
-                                key={d}
                                 type="button"
-                                onClick={() => handleDurationSelect(d)}
-                                className={`flex-1 py-2 text-sm font-semibold rounded-lg border-2 transition-colors ${!isFreeMode && duration === d
+                                onClick={() => handleDurationSelect('free')}
+                                className={`flex-1 py-2 text-xs font-bold rounded-xl border-2 transition-colors ${
+                                    isFreeMode
                                         ? 'border-black bg-black text-white'
                                         : 'border-black bg-white text-gray-900 hover:bg-gray-100'
-                                    }`}
-                            >
-                                {d}p
-                            </button>
-                        ))}
-                        <button
-                            type="button"
-                            onClick={() => handleDurationSelect('free')}
-                            className={`flex-1 py-2 text-sm font-semibold rounded-lg border-2 transition-colors ${isFreeMode
-                                    ? 'border-black bg-black text-white'
-                                    : 'border-black bg-white text-gray-900 hover:bg-gray-100'
                                 }`}
-                        >
-                            ⏱️ Free
-                        </button>
-                        <input
-                            type="number"
-                            onChange={handleCustomDurationChange}
-                            placeholder="Khác"
-                            className="w-full text-center py-2 text-sm font-semibold rounded-lg bg-white text-gray-900 border-2 border-black focus:ring-2 focus:ring-gray-400 flex-1"
-                        />
-                    </div>
-                    {isFreeMode && (
-                        <div className="mb-4 p-3 bg-gray-100 rounded-lg border-2 border-black">
-                            <p className="text-sm text-gray-700 text-center">
-                                📈 Chế độ tự do: Thời gian sẽ đếm lên từ 00:00
-                            </p>
+                            >
+                                ⏱️ Free Mode (Tự do)
+                            </button>
+                            <div className="flex-1 flex items-center gap-1 border-2 border-black rounded-xl px-2 bg-white">
+                                <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">Khác:</span>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="360"
+                                    value={!isFreeMode && !sciencePresets.some(p => p.minutes === duration) ? duration : ''}
+                                    onChange={handleCustomDurationChange}
+                                    placeholder="phút"
+                                    className="w-full text-center py-1 text-sm font-bold bg-transparent text-gray-900 focus:outline-none"
+                                />
+                            </div>
                         </div>
-                    )}
+                    </div>
+
+                    {/* Active Science Card Preview Info */}
+                    <div className={`mb-4 p-3 rounded-xl border-2 ${activeScienceMeta.badgeBg}`}>
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-sm flex items-center gap-1.5">
+                                <span>{activeScienceMeta.breakIcon}</span>
+                                <span>{activeScienceMeta.label} ({isFreeMode ? 'Tự do' : `${duration} phút`})</span>
+                            </span>
+                            <span className="text-xs font-bold px-2 py-0.5 rounded bg-white bg-opacity-90 border border-current shadow-sm">
+                                ☕ Nghỉ {activeScienceMeta.breakMinutes}p sau phiên
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-800 mb-1">
+                            📌 <strong>Khuyên dùng:</strong> {activeScienceMeta.recommendation}
+                        </p>
+                        <p className="text-xs text-gray-600 italic">
+                            💡 <strong>Cơ chế:</strong> {activeScienceMeta.scienceNote}
+                        </p>
+                    </div>
+
                     <div className="flex space-x-3">
-                        <button type="button" onClick={onClose} className="flex-1 py-3 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors">Hủy</button>
-                        <button type="submit" className="flex-1 py-3 font-bold rounded-lg border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors">Bắt đầu ✨</button>
+                        <button type="button" onClick={onClose} className="flex-1 py-3 font-semibold rounded-xl border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors">Hủy</button>
+                        <button type="submit" className="flex-1 py-3 font-bold rounded-xl border-2 border-black bg-black text-white hover:bg-gray-800 transition-colors">Bắt đầu ✨</button>
                     </div>
                 </form>
             </div>

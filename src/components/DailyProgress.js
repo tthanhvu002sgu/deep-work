@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { formatTime } from '../utils/formatters';
+import { getDailyFocusStatus } from '../utils/scienceConfig';
 
 const DailyProgress = ({ dailyTarget, todayFocusTime, onSetTarget }) => {
   // Giao diện tối giản khi chưa có mục tiêu
@@ -19,6 +20,7 @@ const DailyProgress = ({ dailyTarget, todayFocusTime, onSetTarget }) => {
 
   const progress = Math.min((todayFocusTime / dailyTarget) * 100, 100);
   const isTargetCompleted = todayFocusTime >= dailyTarget;
+  const focusStatus = getDailyFocusStatus(todayFocusTime);
 
   // Giao diện hiển thị tiến độ
   return (
@@ -27,20 +29,22 @@ const DailyProgress = ({ dailyTarget, todayFocusTime, onSetTarget }) => {
         <span className="text-gray-600">
           {formatTime(todayFocusTime)} / {formatTime(dailyTarget)}
         </span>
-        <span className="font-bold text-gray-900">
+        <span className={`font-bold ${focusStatus.level === 'max' ? 'text-red-600 animate-pulse' : 'text-gray-900'}`}>
           {Math.round(progress)}%
         </span>
       </div>
       <div 
         className="wire-progress-hatch h-2 cursor-pointer" 
         onClick={onSetTarget}
-        title="Nhấn để thay đổi mục tiêu"
+        title={focusStatus.warningMessage || "Nhấn để thay đổi mục tiêu"}
       >
         <div 
           className={`h-full transition-all duration-500 ${
-            isTargetCompleted 
-              ? 'bg-black' 
-              : 'progress-fill'
+            focusStatus.level === 'max'
+              ? 'bg-red-600'
+              : isTargetCompleted 
+                ? 'bg-black' 
+                : 'progress-fill'
           }`}
           style={{ width: `${progress}%` }}
         />

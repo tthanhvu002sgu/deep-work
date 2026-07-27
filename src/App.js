@@ -25,6 +25,7 @@ import {
 import { FileManagerModal } from "./components/FileManagerModal";
 import fileStorageService from "./services/fileStorageService";
 import BreakScreen from "./components/BreakScreen";
+import { getSessionScienceMeta } from "./utils/scienceConfig";
 
 const App = () => {
   // State management
@@ -316,8 +317,17 @@ const App = () => {
 
         await new Promise((resolve) => setTimeout(resolve, 50));
 
+        const durationMin = Math.round(timeWorked / 60);
+        const scienceMeta = activeSession.scienceMeta || getSessionScienceMeta(durationMin);
+
         setActiveSession(null);
-        setActiveBreak(true);
+        setActiveBreak({
+          duration: scienceMeta.breakDuration,
+          message: scienceMeta.breakMessage,
+          icon: scienceMeta.breakIcon,
+          label: scienceMeta.label,
+          breakMinutes: scienceMeta.breakMinutes,
+        });
         setModal(null);
 
         setTimeout(() => {
@@ -427,9 +437,11 @@ const App = () => {
 
   // SIMPLIFIED: handleStartSession (removed hasStartedFirstSession logic)
   const handleStartSession = useCallback((task, duration) => {
+    const scienceMeta = getSessionScienceMeta(duration);
     const session = {
       task: task,
       duration: duration === 0 ? 0 : duration * 60,
+      scienceMeta: scienceMeta,
     };
     setActiveSession(session);
     setModal(null);
@@ -692,13 +704,19 @@ const App = () => {
   }, [weeklyTasks]);
 
   const handleBreakEnd = useCallback(() => {
-    setActiveBreak(false);
+    setActiveBreak(null);
   }, []);
 
   return (
     <div className="h-screen w-screen bg-slate-100 text-slate-800 antialiased overflow-hidden flex flex-col">
       {activeBreak ? (
-        <BreakScreen duration={300} onComplete={handleBreakEnd} />
+        <BreakScreen 
+          duration={activeBreak.duration || 300} 
+          message={activeBreak.message}
+          icon={activeBreak.icon}
+          label={activeBreak.label}
+          onComplete={handleBreakEnd} 
+        />
       ) : !activeSession ? (
         <>
           <Header

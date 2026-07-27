@@ -2,14 +2,33 @@
 
 import React from 'react';
 import { formatTime, getFilterText } from '../utils/formatters';
+import { getDailyFocusStatus } from '../utils/scienceConfig';
 import DailyProgress from './DailyProgress';
 
-const GeneralStats = ({ seconds, filter }) => (
-  <p className="text-sm text-gray-600">
-    <span className="font-bold text-gray-900">{formatTime(seconds)}</span>
-    {' '}tập trung {getFilterText(filter)}
-  </p>
-);
+const GeneralStats = ({ seconds, filter, todayFocusTime }) => {
+  const effectiveTodaySeconds = todayFocusTime !== undefined ? todayFocusTime : seconds;
+  const focusStatus = getDailyFocusStatus(effectiveTodaySeconds);
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <p className="text-sm text-gray-600">
+        <span className={`font-bold ${filter === 'day' && focusStatus.level === 'max' ? 'text-red-600 underline decoration-2' : 'text-gray-900'}`}>
+          {formatTime(seconds)}
+        </span>
+        {' '}tập trung {getFilterText(filter)}
+      </p>
+
+      {filter === 'day' && (
+        <span
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs transition-all ${focusStatus.badgeClass}`}
+          title={focusStatus.warningMessage || focusStatus.label}
+        >
+          {focusStatus.shortLabel}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const Header = ({ sessions, filter, dailyTarget, todayFocusTime, onSetTarget }) => {
   const totalFocusSeconds = sessions.reduce((acc, session) => acc + session.duration, 0);
@@ -25,7 +44,7 @@ const Header = ({ sessions, filter, dailyTarget, todayFocusTime, onSetTarget }) 
 
         {/* Right Side: Stats */}
         <div className="flex items-center gap-4">
-          <GeneralStats seconds={totalFocusSeconds} filter={filter} />
+          <GeneralStats seconds={totalFocusSeconds} filter={filter} todayFocusTime={todayFocusTime} />
           <DailyProgress 
             dailyTarget={dailyTarget} 
             todayFocusTime={todayFocusTime} 

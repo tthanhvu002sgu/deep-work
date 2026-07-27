@@ -1,11 +1,18 @@
+// src/components/BreakScreen.jsx
+
 import React, { useState, useEffect } from "react";
 
-const BreakScreen = ({ duration = 300, onComplete }) => {
+const BreakScreen = ({ 
+  duration = 300, 
+  message, 
+  icon = "☕", 
+  label = "Giải lao", 
+  onComplete 
+}) => {
   const [timeLeft, setTimeLeft] = useState(duration);
 
   useEffect(() => {
     // Calculate the absolute end time based on Date.now()
-    // This solves the issue of timers slowing down when the browser tab is backgrounded
     const endTime = Date.now() + duration * 1000;
 
     const intervalId = setInterval(() => {
@@ -31,11 +38,20 @@ const BreakScreen = ({ duration = 300, onComplete }) => {
 
   return (
     <div className="flex-1 min-h-screen flex flex-col items-center justify-center bg-slate-100 p-4">
-      <div className="bg-white rounded-3xl shadow-xl p-10 max-w-sm w-full text-center">
-        <h2 className="text-3xl font-bold text-slate-800 mb-2">Giải lao</h2>
-        <p className="text-slate-500 mb-8">Thư giãn mắt một chút nhé!</p>
+      <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full text-center border-2 border-black">
+        <div className="text-5xl mb-2">{icon}</div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-1">Nghỉ giải lao</h2>
+        <p className="text-xs font-bold text-purple-700 uppercase tracking-wider mb-4">
+          {label ? `Sau phiên ${label}` : 'Phục hồi nhận thức'}
+        </p>
         
-        <div className="relative w-56 h-56 mx-auto mb-10">
+        {/* Dynamic Science Break Message */}
+        <div className="bg-purple-50 p-4 rounded-2xl mb-6 border border-purple-200 text-sm text-purple-900 leading-relaxed font-medium shadow-sm">
+          {message || 'Thư giãn mắt, đứng dậy đi dạo, uống nước và rời mắt khỏi màn hình hoàn toàn!'}
+        </div>
+
+        {/* Circular Countdown Timer */}
+        <div className="relative w-48 h-48 mx-auto mb-6">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle
               cx="50"
@@ -50,7 +66,7 @@ const BreakScreen = ({ duration = 300, onComplete }) => {
               cy="50"
               r="45"
               fill="transparent"
-              stroke="#3b82f6"
+              stroke="#8b5cf6"
               strokeWidth="6"
               strokeLinecap="round"
               strokeDasharray={2 * Math.PI * 45}
@@ -59,17 +75,18 @@ const BreakScreen = ({ duration = 300, onComplete }) => {
             />
           </svg>
           <div className="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center">
-            <span className="text-5xl font-bold font-mono text-slate-800 tracking-wider">
+            <span className="text-4xl font-bold font-mono text-slate-800 tracking-wider">
               {formatTime(timeLeft)}
             </span>
+            <span className="text-xs text-slate-500 font-medium mt-1">thời gian nghỉ</span>
           </div>
         </div>
 
         <button
           onClick={onComplete}
-          className="w-full py-4 px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors active:scale-95 transform"
+          className="w-full py-3.5 px-6 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-colors active:scale-95 transform border-2 border-black"
         >
-          Bỏ qua nghỉ ngơi
+          Bỏ qua nghỉ ngơi & Tiếp tục làm việc
         </button>
       </div>
     </div>

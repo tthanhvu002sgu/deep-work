@@ -91,7 +91,7 @@ const Sidebar = ({
       {/* Mobile Backdrop */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden transition-opacity"
           onClick={onCloseMobile}
           aria-hidden="true"
         />
@@ -99,7 +99,7 @@ const Sidebar = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 flex flex-col bg-white border-r-2 border-black transition-all duration-300 ease-in-out select-none shrink-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 lg:z-10 flex flex-col bg-white border-r-2 border-black transition-all duration-300 ease-in-out select-none shrink-0 ${
           isOpenMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         } ${isCollapsed ? "w-20" : "w-64 sm:w-72"}`}
       >

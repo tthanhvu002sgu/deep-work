@@ -14,8 +14,8 @@ export const DailyTargetModal = ({ currentTarget, onClose, onSetTarget, presetTa
     const presets = presetTargets || [30, 60, 90, 120, 180];
 
     return (
-        <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="modal-content w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border-2 border-black max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-3 text-center text-gray-900">🎯 Đặt mục tiêu hôm nay</h3>
                 <p className="text-sm text-gray-600 text-center mb-4">
                     Đặt mục tiêu thời gian tập trung cho ngày hôm nay (Tối đa khuyến nghị khoa học: 4 tiếng/ngày)
@@ -135,8 +135,8 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask, sessionPre
     const activeScienceMeta = getSessionScienceMeta(isFreeMode ? 0 : duration);
 
     return (
-        <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-5 shadow-2xl border-t-2 border-x-2 border-black max-w-lg mx-auto">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="modal-content w-full bg-white rounded-2xl p-5 shadow-2xl border-2 border-black max-w-lg max-h-[90vh] overflow-y-auto">
                 <h3 className="text-xl font-bold mb-3 text-center text-gray-900">
                     {task ? '🚀 Bắt đầu phiên làm việc' : '➕ Thêm Task Mới'}
                 </h3>
@@ -234,8 +234,8 @@ export const TaskModal = ({ task, onClose, onStartSession, onAddTask, sessionPre
 };
 
 export const SessionEndModal = ({ onContinue, onComplete, onPause }) => (
-    <div className="modal-container fixed inset-0 z-30 flex items-end show">
-        <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl text-center border-t-2 border-x-2 border-black">
+    <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+        <div className="modal-content w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
             <h3 className="text-xl font-bold mb-2 text-gray-900">🎉 Phiên hoàn thành!</h3>
             <div className="flex flex-col space-y-2 mt-4">
                 <button onClick={onContinue} className="w-full py-3 font-semibold text-white bg-black rounded-lg border-2 border-black hover:bg-gray-800 transition-colors">⏭️ Tiếp tục (Nghỉ 5p)</button>
@@ -247,7 +247,7 @@ export const SessionEndModal = ({ onContinue, onComplete, onPause }) => (
 );
 
 export const ConfirmStopModal = ({ onConfirm, onCancel }) => (
-    <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
+    <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
         <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
             <h3 className="text-lg font-bold mb-2 text-gray-900">Dừng phiên làm việc?</h3>
             <p className="text-sm text-gray-600 mb-6">Tiến trình của phiên này sẽ không được lưu lại.</p>
@@ -260,7 +260,7 @@ export const ConfirmStopModal = ({ onConfirm, onCancel }) => (
 );
 
 export const ConfirmDeleteModal = ({ task, onConfirm, onCancel }) => (
-    <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
+    <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
         <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
             <h3 className="text-lg font-bold mb-2 text-gray-900">Xóa task?</h3>
             <p className="text-sm text-gray-600 mb-2">Bạn có chắc chắn muốn xóa task:</p>
@@ -287,7 +287,7 @@ export const ConfirmDeleteSessionModal = ({ session, taskName, onConfirm, onCanc
         : "";
 
     return (
-        <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
             <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
                 <h3 className="text-lg font-bold mb-2 text-gray-900">Xóa phiên làm việc?</h3>
                 <p className="text-sm text-gray-600 mb-3">Bạn có chắc chắn muốn xóa phiên làm việc này:</p>
@@ -562,8 +562,8 @@ export const EditTaskModal = ({ task, onClose, onSave }) => {
     };
 
     return (
-        <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="modal-content w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border-2 border-black">
                 <h3 className="text-lg font-bold mb-3 text-center">✏️ Chỉnh sửa Task</h3>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
@@ -607,7 +607,7 @@ export const EditTaskModal = ({ task, onClose, onSave }) => {
 
 // NEW: Confirm Archive/Unarchive Modal
 export const ConfirmArchiveModal = ({ task, onConfirm, onCancel }) => (
-    <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
+    <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
         <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
             <h3 className="text-lg font-bold mb-2 text-gray-900">
                 {task?.isArchived ? '📤 Hiện task?' : '📦 Ẩn task?'}
@@ -746,8 +746,8 @@ export const ManualSessionModal = ({ tasks, onClose, onSubmit }) => {
     const activeTasks = tasks.filter(t => !t.isArchived);
 
     return (
-        <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="modal-content w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border-2 border-black max-h-[90vh] overflow-y-auto">
                 <h3 className="text-lg font-bold mb-3 text-center text-gray-900">
                     ⏱️ Thêm thời gian thủ công
                 </h3>
@@ -911,8 +911,8 @@ export const SettingsModal = ({ onClose, settings, onSave }) => {
     };
 
     return (
-        <div className="modal-container fixed inset-0 z-30 flex items-end show">
-            <div className="modal-content w-full bg-white rounded-t-2xl p-4 shadow-2xl border-t-2 border-x-2 border-black">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+            <div className="modal-content w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border-2 border-black max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold text-gray-900">⚙️ Cài đặt khung thời gian</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
@@ -1014,7 +1014,7 @@ export const WeeklyScheduleModal = ({ weeklyTasks, onClose, onAddTask, onDeleteT
     };
 
     return (
-        <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
+        <div className="modal-container fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 show">
             <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl border-2 border-black overflow-hidden">
                 <div className="p-4 border-b-2 border-black flex justify-between items-center bg-gray-50">
                     <h3 className="text-2xl font-bold text-gray-900">📅 Thời khóa biểu tuần</h3>

@@ -1,7 +1,6 @@
-// src/App.jsx
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
 import TaskList from "./components/TaskList";
 import FocusView from "./components/FocusView";
 import HistoryView from "./components/HistoryView";
@@ -10,6 +9,7 @@ import {
   SessionEndModal,
   ConfirmStopModal,
   ConfirmDeleteModal,
+  ConfirmDeleteSessionModal,
   DailyTargetModal,
   LoadingModal,
   ErrorModal,
@@ -39,12 +39,35 @@ const App = () => {
   const [modal, setModal] = useState(null);
   const [taskToStart, setTaskToStart] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [sessionToDelete, setSessionToDelete] = useState(null);
 
   // NEW: States for edit and archive
   const [taskToEdit, setTaskToEdit] = useState(null);
   const [taskToArchive, setTaskToArchive] = useState(null);
   const [archivedTasks, setArchivedTasks] = useState([]);
   const [showArchivedTasks, setShowArchivedTasks] = useState(false);
+
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("deepwork_sidebar_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
+
+  const handleToggleSidebarCollapse = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("deepwork_sidebar_collapsed", String(next));
+      } catch (e) {
+        console.warn("Could not save sidebar state to localStorage:", e);
+      }
+      return next;
+    });
+  }, []);
 
   const [filter, setFilter] = useState("day");
   const [activeBreak, setActiveBreak] = useState(false);
@@ -78,6 +101,22 @@ const App = () => {
       console.warn('Could not save settings to localStorage:', e);
     }
   }, []);
+
+  // Close mobile sidebar when pressing Escape
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape" && sidebarOpenMobile) {
+        setSidebarOpenMobile(false);
+      }
+    };
+
+    if (sidebarOpenMobile) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [sidebarOpenMobile]);
 
   // FIX: Add effect to detect when a new day starts
   useEffect(() => {
@@ -374,6 +413,54 @@ const App = () => {
       setModal("error");
     }
   }, [taskToDelete, deleteTask]);
+
+  // Session deletion handlers
+  const deleteSession = useCallback(async (sessionId) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      await fileStorageService.deleteSession(sessionId);
+
+      setSessions((prev) => prev.filter((session) => session.id !== sessionId));
+
+      if (typeof fileStorageService.forceSave === "function") {
+        await fileStorageService.forceSave();
+        console.log("✅ Đã lưu dữ liệu vào storage sau khi xóa phiên");
+      }
+
+      console.log("Session deleted:", sessionId);
+      return true;
+    } catch (error) {
+      console.error("Error deleting session:", error);
+      setError("Không thể xóa phiên làm việc: " + error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleDeleteSession = useCallback((session) => {
+    setSessionToDelete(session);
+    setModal("confirmDeleteSession");
+  }, []);
+
+  const handleCancelDeleteSession = useCallback(() => {
+    setModal(null);
+    setSessionToDelete(null);
+  }, []);
+
+  const handleConfirmDeleteSession = useCallback(async () => {
+    if (!sessionToDelete) return;
+
+    try {
+      await deleteSession(sessionToDelete.id);
+      setModal(null);
+      setSessionToDelete(null);
+    } catch (error) {
+      setModal("error");
+    }
+  }, [sessionToDelete, deleteSession]);
 
   const handleSetDailyTarget = useCallback(async (targetMinutes) => {
     setLoading(true);
@@ -718,128 +805,115 @@ const App = () => {
           onComplete={handleBreakEnd} 
         />
       ) : !activeSession ? (
-        <>
-          <Header
-            sessions={filteredSessions}
-            filter={filter}
-            dailyTarget={dailyTarget}
+        <div className="flex h-full w-full overflow-hidden">
+          {/* Dedicated Responsive Sidebar Menu */}
+          <Sidebar
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleToggleSidebarCollapse}
+            isOpenMobile={sidebarOpenMobile}
+            onCloseMobile={() => setSidebarOpenMobile(false)}
+            onOpenModal={(modalName) => {
+              if (modalName === "archivedTasks") {
+                handleShowArchivedTasks();
+              } else {
+                setModal(modalName);
+              }
+            }}
+            archivedCount={archivedTasks.length}
+            upcomingTasksCount={upcomingWeeklyTasks.filter((t) => !t.isPast).length}
             todayFocusTime={todayFocusTime}
-            onSetTarget={() => setModal("dailyTarget")}
+            dailyTarget={dailyTarget}
           />
 
-          <div className="flex-grow overflow-y-auto px-4 pb-24">
-            {isTransitioning && (
-              <div className="fixed inset-0 z-30 bg-white bg-opacity-75 flex items-center justify-center">
-                <div className="bg-white rounded-lg p-6 shadow-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="text-lg font-medium">Đang lưu kết quả...</span>
+          {/* Main Dashboard Area */}
+          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+            <Header
+              sessions={filteredSessions}
+              filter={filter}
+              dailyTarget={dailyTarget}
+              todayFocusTime={todayFocusTime}
+              onSetTarget={() => setModal("dailyTarget")}
+              onToggleSidebarMobile={() => setSidebarOpenMobile((prev) => !prev)}
+            />
+
+            <div className="flex-grow overflow-y-auto px-4 sm:px-6 py-4 pb-20">
+              {isTransitioning && (
+                <div className="fixed inset-0 z-30 bg-white bg-opacity-75 flex items-center justify-center">
+                  <div className="bg-white rounded-lg p-6 shadow-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      <span className="text-lg font-medium">Đang lưu kết quả...</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* NEW: Upcoming Tasks Banner */}
-            {upcomingWeeklyTasks.length > 0 && (
-              <div className="mb-4 bg-white rounded-xl p-4 shadow-sm border-2 border-black">
-                <h3 className="font-bold text-lg mb-2 flex items-center">
-                  <span className="mr-2">📅</span> Lịch trình hôm nay
-                </h3>
-                <div className="space-y-2">
-                  {upcomingWeeklyTasks.map(task => (
-                    <div key={task.id} className={`flex justify-between items-center p-2 rounded-lg border-2 ${task.isActive ? 'border-red-500 bg-red-50 animate-pulse' : task.isPast ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-blue-200 bg-blue-50'}`}>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-gray-900">{task.time}</span>
-                        <span className="text-sm text-gray-700">{task.name}</span>
+              {/* Upcoming Tasks Banner */}
+              {upcomingWeeklyTasks.length > 0 && (
+                <div className="mb-4 bg-white rounded-xl p-4 shadow-sm border-2 border-black">
+                  <h3 className="font-bold text-lg mb-2 flex items-center">
+                    <span className="mr-2">📅</span> Lịch trình hôm nay
+                  </h3>
+                  <div className="space-y-2">
+                    {upcomingWeeklyTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className={`flex justify-between items-center p-2 rounded-lg border-2 ${
+                          task.isActive
+                            ? "border-red-500 bg-red-50 animate-pulse"
+                            : task.isPast
+                            ? "border-gray-200 bg-gray-50 opacity-60"
+                            : "border-blue-200 bg-blue-50"
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-900">{task.time}</span>
+                          <span className="text-sm text-gray-700">{task.name}</span>
+                        </div>
+                        <div
+                          className={`font-semibold text-sm px-2 py-1 rounded ${
+                            task.isActive
+                              ? "text-red-700 bg-red-100"
+                              : task.isPast
+                              ? "text-gray-500"
+                              : "text-blue-700 bg-blue-100"
+                          }`}
+                        >
+                          {task.remainingText}
+                        </div>
                       </div>
-                      <div className={`font-semibold text-sm px-2 py-1 rounded ${task.isActive ? 'text-red-700 bg-red-100' : task.isPast ? 'text-gray-500' : 'text-blue-700 bg-blue-100'}`}>
-                        {task.remainingText}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            <HistoryView
-              sessions={filteredSessions}
-              tasks={tasks}
-              filter={filter}
-              setFilter={setFilter}
-              dailyTargets={{}}
-              allSessions={sessions}
-            />
-            <TaskList
-              tasks={tasks}
-              onTaskClick={(task) => {
-                setTaskToStart(task);
-                setModal("startTask");
-              }}
-              onTaskEdit={handleEditTask} // NEW
-              onTaskArchive={handleArchiveTask} // NEW
-              onTaskDelete={handleDeleteTask}
-            />
-          </div>
+              <HistoryView
+                sessions={filteredSessions}
+                tasks={tasks}
+                filter={filter}
+                setFilter={setFilter}
+                dailyTargets={{}}
+                allSessions={sessions}
+                onDeleteSession={handleDeleteSession}
+              />
+              <TaskList
+                tasks={tasks}
+                onTaskClick={(task) => {
+                  setTaskToStart(task);
+                  setModal("startTask");
+                }}
+                onTaskEdit={handleEditTask}
+                onTaskArchive={handleArchiveTask}
+                onTaskDelete={handleDeleteTask}
+              />
+            </div>
 
-          {/* Floating Action Buttons */}
-          <div className="fixed bottom-6 right-6 flex flex-col space-y-3 z-20">
-            {/* NEW: Schedule Button */}
-            <button
-              onClick={() => setModal("weeklySchedule")}
-              className="bg-indigo-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-indigo-700 transition transform hover:scale-110"
-              aria-label="Thời khóa biểu"
-              title="Thời khóa biểu tuần"
-            >
-              📅
-            </button>
-
-            {/* NEW: Archived Tasks Button */}
-            {archivedTasks.length > 0 && (
-              <button
-                onClick={handleShowArchivedTasks}
-                className="bg-orange-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-orange-700 transition transform hover:scale-110 relative"
-                aria-label="Xem tasks đã ẩn"
-                title="Tasks đã ẩn"
-              >
-                📦
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {archivedTasks.length}
-                </span>
-              </button>
-            )}
-
-            <button
-              onClick={() => setModal("fileManager")}
-              className="bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-green-700 transition transform hover:scale-110"
-              aria-label="Quản lý file dữ liệu"
-              title="Quản lý file dữ liệu"
-            >
-              📁
-            </button>
-
-            {/* NEW: Thêm thời gian thủ công Button */}
-            <button
-              onClick={() => setModal("manualSession")}
-              className="bg-purple-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-purple-700 transition transform hover:scale-110"
-              aria-label="Thêm thời gian thủ công"
-              title="Thêm thời gian thủ công"
-            >
-              ⏱️
-            </button>
-
-            <button
-              onClick={() => setModal("settings")}
-              className="bg-gray-800 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-gray-900 transition transform hover:scale-110"
-              aria-label="Cài đặt khung thời gian"
-              title="Cài đặt khung thời gian"
-            >
-              ⚙️
-            </button>
-
+            {/* Mobile Floating Quick Add Button */}
             <button
               onClick={() => setModal("addTask")}
-              className="bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-blue-700 transition transform hover:scale-110"
+              className="lg:hidden fixed bottom-6 right-6 z-30 bg-black text-white rounded-full w-14 h-14 flex items-center justify-center border-2 border-black shadow-xl hover:bg-gray-800 active:scale-95 transition"
               aria-label="Thêm task mới"
+              title="Thêm task mới"
               disabled={loading || isTransitioning}
             >
               <svg
@@ -851,13 +925,13 @@ const App = () => {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                   d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 ></path>
               </svg>
             </button>
           </div>
-        </>
+        </div>
       ) : (
         <FocusView
           session={activeSession}
@@ -966,6 +1040,15 @@ const App = () => {
         />
       )}
 
+      {modal === "confirmDeleteSession" && sessionToDelete && (
+        <ConfirmDeleteSessionModal
+          session={sessionToDelete}
+          taskName={tasks.find((t) => t.id === sessionToDelete.taskId)?.name}
+          onConfirm={handleConfirmDeleteSession}
+          onCancel={handleCancelDeleteSession}
+        />
+      )}
+
       {modal === "dailySummary" && dailySummaryDate && (
         <DailySummaryModal
           date={dailySummaryDate}
@@ -975,6 +1058,7 @@ const App = () => {
           tasks={tasks}
           dailyTarget={Math.round(dailyTarget / 60)} // Convert to minutes
           onClose={handleCloseDailySummary}
+          onDeleteSession={handleDeleteSession}
         />
       )}
 

@@ -275,6 +275,13 @@ class FileStorageService {
     return newSession;
   }
 
+  async deleteSession(sessionId) {
+    this.data.sessions = this.data.sessions.filter(session => session.id !== sessionId);
+    await this.saveData(); // Tự động lưu sau khi xóa session
+    console.log('🗑️ Đã xóa session:', sessionId);
+    return true;
+  }
+
   // Daily targets operations
   async getDailyTarget(date = null) {
     const targetDate = date || new Date().toISOString().split('T')[0];

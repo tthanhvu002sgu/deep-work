@@ -274,6 +274,38 @@ export const ConfirmDeleteModal = ({ task, onConfirm, onCancel }) => (
     </div>
 );
 
+export const ConfirmDeleteSessionModal = ({ session, taskName, onConfirm, onCancel }) => {
+    const durationMin = session ? Math.round(session.duration / 60) : 0;
+    const timeStr = session?.completedAt
+        ? new Date(session.completedAt).toLocaleString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        })
+        : "";
+
+    return (
+        <div className="modal-container fixed inset-0 z-40 flex items-center justify-center p-4 show">
+            <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl text-center border-2 border-black">
+                <h3 className="text-lg font-bold mb-2 text-gray-900">Xóa phiên làm việc?</h3>
+                <p className="text-sm text-gray-600 mb-3">Bạn có chắc chắn muốn xóa phiên làm việc này:</p>
+                <div className="bg-gray-50 border-2 border-black rounded-lg p-3 mb-4 text-left">
+                    <p className="text-sm font-bold text-gray-900 truncate">🎯 {taskName || "Task đã xóa"}</p>
+                    <p className="text-xs text-gray-600 mt-1">⏱️ Thời lượng: <span className="font-semibold text-gray-900">{durationMin} phút</span></p>
+                    {timeStr && <p className="text-xs text-gray-500 mt-0.5">🕒 Thời gian: {timeStr}</p>}
+                </div>
+                <p className="text-xs text-gray-500 mb-6">Dữ liệu thống kê sẽ được cập nhật lại ngay sau khi xóa.</p>
+                <div className="flex space-x-3">
+                    <button onClick={onCancel} className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-white text-gray-900 hover:bg-gray-100 transition-colors">Hủy</button>
+                    <button onClick={onConfirm} className="flex-1 py-2.5 font-bold rounded-lg border-2 border-black bg-red-500 text-white hover:bg-red-600 transition-colors">Xóa</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export const LoadingModal = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div className="bg-white rounded-lg p-6 shadow-xl">
@@ -299,7 +331,7 @@ export const ErrorModal = ({ error, onClose, onRetry }) => (
                 </button>
                 <button
                     onClick={onClose}
-                    className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                    className="flex-1 py-2.5 font-semibold rounded-lg border-2 border-black bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors"
                 >
                     Đóng
                 </button>
@@ -309,7 +341,7 @@ export const ErrorModal = ({ error, onClose, onRetry }) => (
 );
 
 // NEW: Daily Summary Modal
-export const DailySummaryModal = ({ date, sessions, tasks, dailyTarget, onClose }) => {
+export const DailySummaryModal = ({ date, sessions, tasks, dailyTarget, onClose, onDeleteSession }) => {
     const [activeTab, setActiveTab] = useState('overview');
 
     const totalMinutes = Math.round(sessions.reduce((acc, s) => acc + s.duration, 0) / 60);
@@ -459,16 +491,28 @@ export const DailySummaryModal = ({ date, sessions, tasks, dailyTarget, onClose 
                                             return (
                                                 <div key={session.id || index} className="relative">
                                                     <div className="absolute w-3 h-3 bg-blue-500 rounded-full -left-[27px] top-1.5 border-2 border-white shadow"></div>
-                                                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 shadow-sm">
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <span className="font-semibold text-gray-800">{taskName}</span>
-                                                            <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                                                                {Math.round(session.duration / 60)}p
-                                                            </span>
+                                                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 shadow-sm flex justify-between items-center">
+                                                        <div className="flex-1 min-w-0 pr-2">
+                                                            <div className="flex items-center space-x-2 mb-1">
+                                                                <span className="font-semibold text-gray-800 truncate">{taskName}</span>
+                                                                <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full flex-shrink-0">
+                                                                    {Math.round(session.duration / 60)}p
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {formatTime(startTime)} - {formatTime(endTime)}
+                                                            </div>
                                                         </div>
-                                                        <div className="text-xs text-gray-500">
-                                                            {formatTime(startTime)} - {formatTime(endTime)}
-                                                        </div>
+                                                        {onDeleteSession && (
+                                                            <button
+                                                                onClick={() => onDeleteSession(session)}
+                                                                className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors flex-shrink-0"
+                                                                title="Xóa phiên làm việc này"
+                                                                aria-label="Xóa phiên làm việc"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );

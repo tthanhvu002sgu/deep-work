@@ -348,6 +348,7 @@ const HistoryView = ({
   setFilter,
   dailyTargets = {},
   allSessions = [],
+  onDeleteSession,
 }) => {
   const [viewMode, setViewMode] = useState("chart");
   const [chartTooltip, setChartTooltip] = useState({
@@ -920,16 +921,28 @@ const HistoryView = ({
                         return (
                           <div key={session.id || index} className="relative">
                             <div className="absolute w-3 h-3 bg-black rounded-full -left-[27px] top-1.5 border-2 border-white shadow"></div>
-                            <div className="bg-white rounded-lg p-3 border-2 border-black">
-                              <div className="flex justify-between items-start mb-1">
-                                <span className="font-bold text-gray-900">{taskName}</span>
-                                <span className="text-xs font-bold bg-black text-white px-2 py-0.5 rounded">
-                                  {Math.round(session.duration / 60)}p
-                                </span>
+                            <div className="bg-white rounded-lg p-3 border-2 border-black flex justify-between items-center hover:bg-gray-50 transition-colors">
+                              <div className="flex-1 min-w-0 pr-2">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <span className="font-bold text-gray-900 truncate">{taskName}</span>
+                                  <span className="text-xs font-bold bg-black text-white px-2 py-0.5 rounded flex-shrink-0">
+                                    {Math.round(session.duration / 60)}p
+                                  </span>
+                                </div>
+                                <div className="text-xs text-gray-500 font-semibold">
+                                  {formatDateLabel(endTime)}{formatTime(startTime)} - {formatTime(endTime)}
+                                </div>
                               </div>
-                              <div className="text-xs text-gray-500 font-semibold">
-                                {formatDateLabel(endTime)}{formatTime(startTime)} - {formatTime(endTime)}
-                              </div>
+                              {onDeleteSession && (
+                                <button
+                                  onClick={() => onDeleteSession(session)}
+                                  className="wire-btn-outline p-1.5 rounded-md text-xs hover:bg-red-50 hover:border-red-500 hover:text-red-600 transition-colors flex-shrink-0"
+                                  title="Xóa phiên làm việc"
+                                  aria-label={`Xóa phiên làm việc ${taskName}`}
+                                >
+                                  🗑️
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

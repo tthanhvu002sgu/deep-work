@@ -35,6 +35,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dailyTarget, setDailyTarget] = useState(0);
+  const [dailyTargets, setDailyTargets] = useState({});
   const [activeSession, setActiveSession] = useState(null);
   const [modal, setModal] = useState(null);
   const [taskToStart, setTaskToStart] = useState(null);
@@ -136,19 +137,22 @@ const App = () => {
     const loadApp = async () => {
       setLoading(true);
       try {
-        const [tasksData, sessionsData, targetData, archivedData, weeklyData] = await Promise.all([
+        await fileStorageService.ensureInitialized();
+        const [tasksData, sessionsData, targetData, archivedData, weeklyData, targetsData] = await Promise.all([
           fileStorageService.getTasks(),
           fileStorageService.getSessions(),
           fileStorageService.getDailyTarget(),
           fileStorageService.getArchivedTasks(),
-          fileStorageService.getWeeklyTasks(), // NEW
+          fileStorageService.getWeeklyTasks(),
+          fileStorageService.getDailyTargets(),
         ]);
 
         setTasks(tasksData);
         setSessions(sessionsData);
         setDailyTarget(targetData.targetMinutes * 60);
         setArchivedTasks(archivedData);
-        setWeeklyTasks(weeklyData); // NEW
+        setWeeklyTasks(weeklyData);
+        setDailyTargets(targetsData);
 
         console.log('Initial data loaded:', {
           tasks: tasksData.length,
@@ -467,6 +471,8 @@ const App = () => {
     try {
       await fileStorageService.setDailyTarget(targetMinutes);
       setDailyTarget(targetMinutes * 60);
+      const targetsData = await fileStorageService.getDailyTargets();
+      setDailyTargets(targetsData);
       setModal(null);
 
       console.log("🎯 Daily target set:", targetMinutes);
@@ -489,13 +495,21 @@ const App = () => {
 
     try {
       setLoading(true);
-      const [tasksData, sessionsData] = await Promise.all([
+      const [tasksData, sessionsData, targetData, archivedData, weeklyData, targetsData] = await Promise.all([
         fileStorageService.getTasks(),
         fileStorageService.getSessions(),
+        fileStorageService.getDailyTarget(),
+        fileStorageService.getArchivedTasks(),
+        fileStorageService.getWeeklyTasks(),
+        fileStorageService.getDailyTargets(),
       ]);
 
       setTasks(tasksData);
       setSessions(sessionsData);
+      setDailyTarget(targetData.targetMinutes * 60);
+      setArchivedTasks(archivedData);
+      setWeeklyTasks(weeklyData);
+      setDailyTargets(targetsData);
 
       console.log("🔄 Data reloaded after retry");
     } catch (error) {
@@ -508,13 +522,21 @@ const App = () => {
 
   const handleFileManagerSuccess = useCallback(async () => {
     try {
-      const [tasksData, sessionsData] = await Promise.all([
+      const [tasksData, sessionsData, targetData, archivedData, weeklyData, targetsData] = await Promise.all([
         fileStorageService.getTasks(),
         fileStorageService.getSessions(),
+        fileStorageService.getDailyTarget(),
+        fileStorageService.getArchivedTasks(),
+        fileStorageService.getWeeklyTasks(),
+        fileStorageService.getDailyTargets(),
       ]);
 
       setTasks(tasksData);
       setSessions(sessionsData);
+      setDailyTarget(targetData.targetMinutes * 60);
+      setArchivedTasks(archivedData);
+      setWeeklyTasks(weeklyData);
+      setDailyTargets(targetsData);
 
       console.log("📁 Data reloaded after file operation");
     } catch (error) {
@@ -892,7 +914,7 @@ const App = () => {
                 tasks={tasks}
                 filter={filter}
                 setFilter={setFilter}
-                dailyTargets={{}}
+                dailyTargets={dailyTargets}
                 allSessions={sessions}
                 onDeleteSession={handleDeleteSession}
               />

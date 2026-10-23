@@ -72,7 +72,10 @@ const FocusHeatmap = ({ sessions, tasks, filter, dailyTargets = {} }) => {
       const totalHours = totalMinutes / 60;
 
       const target = dailyTargets[dateKey];
-      const targetMinutes = target || 0;
+      const targetMinutes =
+        typeof target === 'object' && target !== null
+          ? Number(target.targetMinutes) || 0
+          : Number(target) || 0;
       const targetHours = targetMinutes / 60;
 
       let intensity = 0;

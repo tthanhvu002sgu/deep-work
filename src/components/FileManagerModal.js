@@ -5,7 +5,6 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
   const [fileStatus, setFileStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
-  const [uploadFile, setUploadFile] = useState(null);
 
   useEffect(() => {
     setFileStatus(fileStorageService.getFileStatus());
@@ -14,7 +13,7 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
   const handleSelectFile = async () => {
     setIsLoading(true);
     setMessage(null);
-    
+
     try {
       await fileStorageService.selectFile();
       setFileStatus(fileStorageService.getFileStatus());
@@ -23,6 +22,9 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
         text: 'Đã chọn file thành công! Dữ liệu sẽ được lưu tự động.'
       });
     } catch (error) {
+      if (error.name === 'AbortError') {
+        return;
+      }
       console.error('Error selecting file:', error);
       setMessage({
         type: 'error',
@@ -36,20 +38,23 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
   const handleLoadFromFile = async () => {
     setIsLoading(true);
     setMessage(null);
-    
+
     try {
-      await fileStorageService.loadFromFile();
+      const imported = await fileStorageService.loadFromFile();
       setFileStatus(fileStorageService.getFileStatus());
       setMessage({
         type: 'success',
-        text: 'Đã tải dữ liệu từ file thành công!'
+        text: `Đã nạp thành công ${imported.tasks.length} tasks và ${imported.sessions.length} phiên tập trung!`
       });
-      
+
       setTimeout(() => {
         onSuccess && onSuccess();
         onClose();
       }, 1500);
     } catch (error) {
+      if (error.name === 'AbortError') {
+        return;
+      }
       console.error('Error loading from file:', error);
       setMessage({
         type: 'error',
@@ -77,19 +82,19 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
   };
 
   const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
     if (!file) return;
 
     setIsLoading(true);
     setMessage(null);
-    
+
     try {
-      await fileStorageService.uploadFromInput(file);
+      const imported = await fileStorageService.uploadFromInput(file);
       setMessage({
         type: 'success',
-        text: 'Đã tải lên dữ liệu thành công!'
+        text: `Đã nạp thành công ${imported.tasks.length} tasks và ${imported.sessions.length} phiên tập trung!`
       });
-      
+
       setTimeout(() => {
         onSuccess && onSuccess();
         onClose();
@@ -109,7 +114,7 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
   const handleForceSave = async () => {
     setIsLoading(true);
     setMessage(null);
-    
+
     try {
       await fileStorageService.forceSave();
       setMessage({
@@ -131,7 +136,7 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold mb-4">📁 Quản lý File Dữ liệu</h3>
-        
+
         {/* File Status */}
         {fileStatus && (
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
@@ -154,11 +159,13 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
 
         {/* Message Display */}
         {message && (
-          <div className={`p-3 rounded-lg mb-4 ${
-            message.type === 'error' 
-              ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'bg-green-50 text-green-700 border border-green-200'
-          }`}>
+          <div
+            className={`p-3 rounded-lg mb-4 ${
+              message.type === 'error'
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}
+          >
             <p className="text-sm">{message.text}</p>
           </div>
         )}
@@ -169,67 +176,70 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
             <div className="border rounded-lg p-4">
               <h4 className="font-semibold mb-2">🔄 Đồng bộ với File Cục bộ</h4>
               <p className="text-sm text-gray-600 mb-3">
-                Lưu trực tiếp vào file JSON trên máy tính của bạn
+                Lưu trực tiếp vào file JSON trên máy tính của bạn qua File System Access API
               </p>
-              
+
               <div className="space-y-2">
                 <button
                   onClick={handleSelectFile}
                   disabled={isLoading}
                   className="w-full py-2 px-4 rounded-lg font-medium text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
                 >
-                  {isLoading ? '⏳ Đang chọn...' : '📂 Chọn File để Lưu'}
+                  {isLoading ? '⏳ Đang chọn...' : '📂 Chọn File để Tự động Lưu'}
                 </button>
-                
+
                 <button
                   onClick={handleLoadFromFile}
                   disabled={isLoading}
                   className="w-full py-2 px-4 rounded-lg font-medium text-sm bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-300 transition-colors"
                 >
-                  {isLoading ? '⏳ Đang tải...' : '📥 Tải Dữ liệu từ File'}
+                  {isLoading ? '⏳ Đang nạp...' : '📥 Mở & Nạp Dữ liệu từ File'}
                 </button>
-                
+
                 <button
                   onClick={handleForceSave}
                   disabled={isLoading || !fileStatus?.hasFileHandle}
                   className="w-full py-2 px-4 rounded-lg font-medium text-sm bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-300 transition-colors"
                 >
-                  {isLoading ? '⏳ Đang lưu...' : '💾 Lưu Ngay'}
+                  {isLoading ? '⏳ Đang lưu...' : '💾 Lưu Ngay Ra File'}
                 </button>
               </div>
             </div>
           ) : (
             <div className="border rounded-lg p-4 bg-yellow-50">
-              <h4 className="font-semibold mb-2">⚠️ Trình duyệt không hỗ trợ</h4>
+              <h4 className="font-semibold mb-2">⚠️ Trình duyệt không hỗ trợ File System API</h4>
               <p className="text-sm text-gray-600 mb-3">
-                Trình duyệt của bạn không hỗ trợ File System Access API. Sử dụng phương pháp tải xuống/tải lên thay thế.
+                Vui lòng sử dụng tính năng Xuất / Nhập JSON thủ công bên dưới.
               </p>
             </div>
           )}
 
           {/* Fallback Download/Upload Section */}
           <div className="border rounded-lg p-4">
-            <h4 className="font-semibold mb-2">💾 Xuất/Nhập Thủ công</h4>
+            <h4 className="font-semibold mb-2">💾 Xuất / Nhập JSON Thủ công</h4>
             <p className="text-sm text-gray-600 mb-3">
-              Tải xuống hoặc tải lên file JSON thủ công
+              Tải xuống file backup hoặc nạp file JSON từ thiết bị
             </p>
-            
-            <div className="space-y-2">
+
+            <div className="space-y-3">
               <button
                 onClick={handleDownload}
                 disabled={isLoading}
                 className="w-full py-2 px-4 rounded-lg font-medium text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 transition-colors"
               >
-                📥 Tải xuống JSON
+                📥 Xuất file backup (.json)
               </button>
-              
-              <div className="relative">
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  📤 Nhập file JSON vào hệ thống:
+                </label>
                 <input
                   type="file"
-                  accept=".json"
+                  accept=".json,application/json"
                   onChange={handleFileUpload}
                   disabled={isLoading}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100 file:cursor-pointer disabled:file:bg-gray-100 disabled:file:text-gray-400"
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100 file:cursor-pointer disabled:file:bg-gray-100 disabled:file:text-gray-400 border border-gray-200 rounded-lg p-1"
                 />
               </div>
             </div>
@@ -240,7 +250,7 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
             <h4 className="font-semibold text-sm text-blue-800 mb-1">🔄 Tự động lưu</h4>
             <p className="text-xs text-blue-700">
               Dữ liệu được tự động lưu mỗi 30 giây và khi đóng trang. 
-              LocalStorage luôn được sử dụng làm backup.
+              LocalStorage luôn được đồng bộ làm sao lưu dự phòng.
             </p>
           </div>
         </div>
@@ -257,3 +267,4 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
     </div>
   );
 };
+export default FileManagerModal;

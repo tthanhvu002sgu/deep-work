@@ -43,6 +43,16 @@ const Sidebar = ({
       },
     },
     {
+      id: "cloudSync",
+      label: "Đồng bộ Cloud",
+      icon: "☁️",
+      description: "Đồng bộ Firebase đa thiết bị (mỗi 24h)",
+      onClick: () => {
+        onOpenModal("cloudSync");
+        onCloseMobile();
+      },
+    },
+    {
       id: "fileManager",
       label: "Quản lý dữ liệu file",
       icon: "📁",

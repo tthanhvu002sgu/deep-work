@@ -30,7 +30,7 @@ const GeneralStats = ({ seconds, filter, todayFocusTime }) => {
   );
 };
 
-const Header = ({ sessions, filter, dailyTarget, todayFocusTime, onSetTarget, onToggleSidebarMobile }) => {
+const Header = ({ sessions, filter, dailyTarget, todayFocusTime, onSetTarget, onToggleSidebarMobile, onOpenCloudSync }) => {
   const totalFocusSeconds = sessions.reduce((acc, session) => acc + session.duration, 0);
 
   return (
@@ -58,14 +58,24 @@ const Header = ({ sessions, filter, dailyTarget, todayFocusTime, onSetTarget, on
           </h1>
         </div>
 
-        {/* Right Side: Stats */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Right Side: Stats & Cloud Sync */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <GeneralStats seconds={totalFocusSeconds} filter={filter} todayFocusTime={todayFocusTime} />
           <DailyProgress 
             dailyTarget={dailyTarget} 
             todayFocusTime={todayFocusTime} 
             onSetTarget={onSetTarget} 
           />
+          {onOpenCloudSync && (
+            <button
+              onClick={onOpenCloudSync}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 hover:border-black bg-white hover:bg-gray-50 text-gray-800 text-xs font-semibold shadow-xs transition"
+              title="Đồng bộ Cloud đa thiết bị (mỗi 24h)"
+            >
+              <span>☁️</span>
+              <span className="hidden sm:inline">Sync Cloud</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

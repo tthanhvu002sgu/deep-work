@@ -23,7 +23,9 @@ import {
   AddWeeklyTaskModal,  // NEW
 } from "./components/Modals";
 import { FileManagerModal } from "./components/FileManagerModal";
+import CloudSyncModal from "./components/CloudSyncModal";
 import fileStorageService from "./services/fileStorageService";
+import firebaseSyncService from "./services/firebaseSyncService";
 import BreakScreen from "./components/BreakScreen";
 import { getSessionScienceMeta } from "./utils/scienceConfig";
 
@@ -544,6 +546,22 @@ const App = () => {
     }
   }, []);
 
+  // Lắng nghe và khởi động chu kỳ 24h tự động đồng bộ Firebase
+  useEffect(() => {
+    firebaseSyncService.startPeriodicCheck();
+
+    const unsubscribe = firebaseSyncService.subscribe((event) => {
+      if (event.type === "SYNC_SUCCESS") {
+        console.log("☁️ Dữ liệu Cloud đã cập nhật, đồng bộ vào giao diện...");
+        handleFileManagerSuccess();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [handleFileManagerSuccess]);
+
   // SIMPLIFIED: handleStartSession (removed hasStartedFirstSession logic)
   const handleStartSession = useCallback((task, duration) => {
     const scienceMeta = getSessionScienceMeta(duration);
@@ -856,6 +874,7 @@ const App = () => {
               todayFocusTime={todayFocusTime}
               onSetTarget={() => setModal("dailyTarget")}
               onToggleSidebarMobile={() => setSidebarOpenMobile((prev) => !prev)}
+              onOpenCloudSync={() => setModal("cloudSync")}
             />
 
             <div className="flex-grow overflow-y-auto px-4 sm:px-6 py-4 pb-20">
@@ -972,10 +991,18 @@ const App = () => {
         />
       )}
 
+      {modal === "cloudSync" && (
+        <CloudSyncModal
+          onClose={() => setModal(null)}
+          onSuccess={handleFileManagerSuccess}
+        />
+      )}
+
       {modal === "fileManager" && (
         <FileManagerModal
           onClose={() => setModal(null)}
           onSuccess={handleFileManagerSuccess}
+          onOpenCloudSync={() => setModal("cloudSync")}
         />
       )}
 

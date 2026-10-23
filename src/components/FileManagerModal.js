@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import fileStorageService from '../services/fileStorageService';
 
-export const FileManagerModal = ({ onClose, onSuccess }) => {
+export const FileManagerModal = ({ onClose, onSuccess, onOpenCloudSync }) => {
   const [fileStatus, setFileStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState(null);
@@ -135,7 +135,29 @@ export const FileManagerModal = ({ onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <h3 className="text-lg font-bold mb-4">📁 Quản lý File Dữ liệu</h3>
+        <h3 className="text-lg font-bold mb-3">📁 Quản lý File Dữ liệu</h3>
+
+        {/* Cloud Sync Promo Banner */}
+        {onOpenCloudSync && (
+          <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl flex items-center justify-between">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-xl">☁️</span>
+              <div>
+                <p className="text-xs font-bold text-blue-900">Đồng bộ Cloud (Firebase)</p>
+                <p className="text-[11px] text-blue-700">Tự động đồng bộ đa thiết bị mỗi 24h</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                onOpenCloudSync();
+              }}
+              className="py-1 px-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition"
+            >
+              Mở Cloud
+            </button>
+          </div>
+        )}
 
         {/* File Status */}
         {fileStatus && (

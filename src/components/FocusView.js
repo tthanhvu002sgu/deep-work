@@ -120,6 +120,8 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
 
   // Refs for timer management
   const timerRef = useRef(null);
+  const completeTimeoutRef = useRef(null);
+  const endTimeoutRef = useRef(null);
   const playNotificationRef = useRef(null);
   const cleanupVisibilityListenerRef = useRef(null);
   const isProcessingEndRef = useRef(false);
@@ -134,6 +136,16 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
+      }
+
+      if (completeTimeoutRef.current) {
+        clearTimeout(completeTimeoutRef.current);
+        completeTimeoutRef.current = null;
+      }
+
+      if (endTimeoutRef.current) {
+        clearTimeout(endTimeoutRef.current);
+        endTimeoutRef.current = null;
       }
 
       if (cleanupVisibilityListenerRef.current) {
@@ -209,7 +221,8 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
           }
 
           // CHANGED: Gọi trực tiếp kết thúc session thay vì break
-          setTimeout(() => {
+          completeTimeoutRef.current = setTimeout(() => {
+            completeTimeoutRef.current = null;
             handleSessionComplete();
           }, 100);
         }
@@ -295,7 +308,8 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     }
 
     // CHANGED: Tự động về trang chủ sau 3 giây
-    setTimeout(() => {
+    endTimeoutRef.current = setTimeout(() => {
+      endTimeoutRef.current = null;
       TabFocusManager.restoreTitle();
       onSessionEnd(workTimeToSave);
       isProcessingEndRef.current = false;
@@ -411,7 +425,8 @@ const FocusView = ({ session, onSessionEnd, onStop }) => {
     `;
     document.body.appendChild(processingDiv);
 
-    setTimeout(() => {
+    endTimeoutRef.current = setTimeout(() => {
+      endTimeoutRef.current = null;
       if (document.body.contains(processingDiv)) {
         document.body.removeChild(processingDiv);
       }

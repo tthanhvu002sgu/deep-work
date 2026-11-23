@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import TaskList from "./components/TaskList";
@@ -767,6 +767,10 @@ const App = () => {
     return `Còn ${hours} giờ ${remainMin} phút`;
   };
 
+  const notifiedWeeklyTasksRef = useRef(new Set());
+  const isSessionOrBreakActiveRef = useRef(false);
+  isSessionOrBreakActiveRef.current = Boolean(activeSession || activeBreak);
+
   // Check upcoming weekly tasks
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -776,6 +780,7 @@ const App = () => {
     const checkUpcomingTasks = () => {
       const now = new Date();
       const currentDay = now.getDay(); // 0 is Sunday, 1-6 is Mon-Sat
+      const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
       
       const todaysTasks = weeklyTasks.filter(t => t.dayOfWeek === currentDay);
       if (todaysTasks.length === 0) {
@@ -790,21 +795,28 @@ const App = () => {
         
         const diffMs = taskTime - now;
         
-        // Notify if it's exactly the minute
-        // This runs every 10s, so we check if diff is between 0 and 10s
+        // Notify once per task per day when within the 10s trigger window
         if (diffMs > 0 && diffMs <= 10000) {
-           if ('Notification' in window && Notification.permission === 'granted') {
-             new Notification('Đến giờ!', {
-               body: task.name,
-             });
-           }
-           try {
-             const audio = new Audio(`${process.env.PUBLIC_URL}/noti2.mp3`);
-             audio.volume = 0.7;
-             audio.play();
-           } catch (err) {
-             console.warn("Could not play notification audio:", err);
-           }
+          const notifyKey = `${task.id}-${dateKey}`;
+          if (!notifiedWeeklyTasksRef.current.has(notifyKey)) {
+            notifiedWeeklyTasksRef.current.add(notifyKey);
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('Đến giờ!', {
+                body: task.name,
+              });
+            }
+            if (!isSessionOrBreakActiveRef.current) {
+              try {
+                const audio = new Audio(`${process.env.PUBLIC_URL}/noti.mp3`);
+                audio.volume = 0.7;
+                Promise.resolve(audio.play()).catch((err) => {
+                  console.warn("Could not play notification audio:", err);
+                });
+              } catch (err) {
+                console.warn("Could not play notification audio:", err);
+              }
+            }
+          }
         }
         
         return {

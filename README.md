@@ -1,3 +1,41 @@
+# DeepWork
+
+Ứng dụng quản lý phiên tập trung (Deep Work / Pomodoro / Free Mode), theo dõi lịch sử làm việc, lịch tuần và đồng bộ dữ liệu (LocalStorage / File / Firebase).
+
+## Tổng quan tính năng
+
+- Quản lý danh sách công việc (thêm, sửa, lưu trữ, xóa) và thiết lập mục tiêu tập trung theo ngày.
+- Phiên tập trung (`FocusView`) hỗ trợ đếm ngược theo preset hoặc chế độ tự do (`duration === 0`), kèm màn hình nghỉ giải lao (`BreakScreen`).
+- Lịch tuần (`weeklyTasks`) nhắc việc theo khung giờ trong ngày.
+- Thống kê lịch sử (`HistoryView`) và đồng bộ dữ liệu qua file cục bộ / Firebase (`CloudSyncModal`, `FileManagerModal`).
+
+## Kiến trúc hệ thống
+
+- `src/App.js`: Điều phối trạng thái chính (`tasks`, `sessions`, `weeklyTasks`, `activeSession`, `activeBreak`), vòng lặp kiểm tra lịch tuần và các modal.
+- `src/services/`: Lưu trữ cục bộ (`fileStorageService.js`), cấu hình Firebase (`firebase.js`) và đồng bộ đám mây (`firebaseSyncService.js`).
+- `src/utils/`: Cấu hình chu kỳ tập trung/nghỉ (`scienceConfig.js`), định dạng dữ liệu (`formatters.js`) và quản lý focus tab (`tabFoCusManager.js`).
+
+## Các component chính
+
+- `FocusView` (`src/components/FocusView.js`): Bộ đếm thời gian phiên tập trung, phát âm thanh kết thúc (`noti2.mp3`) và thông báo trình duyệt.
+- `BreakScreen` (`src/components/BreakScreen.jsx`): Bộ đếm thời gian nghỉ giữa phiên.
+- `TaskList` / `TaskItem` (`src/components/TaskList.js`, `src/components/TaskItem.js`): Hiển thị và thao tác danh sách task.
+- `HistoryView` (`src/components/HistoryView.js`): Biểu đồ và danh sách lịch sử phiên làm việc.
+- `Modals` (`src/components/Modals.js`): Các hộp thoại tạo/sửa task, mục tiêu ngày, lịch tuần và xác nhận thao tác.
+
+## Các task đã làm
+
+- **2026-11-23 — Sửa lỗi phát nhầm âm thanh kết thúc phiên:**
+  - Tách âm thanh nhắc lịch tuần trong `src/App.js` sang `noti.mp3`, chặn phát âm thanh nhắc lịch khi đang có `activeSession` hoặc `activeBreak`, thêm dedupe theo `task.id + ngày` và bắt lỗi `audio.play()` Promise.
+  - Bổ sung cleanup `completeTimeoutRef` và `endTimeoutRef` khi unmount trong `src/components/FocusView.js` để tránh phát `noti2.mp3` sau khi đã dừng phiên.
+  - Kết quả verify: `npm test -- --watchAll=false` pass 4/4 suites (5/5 tests, gồm `src/components/FocusView.test.js` và `src/weeklyReminder.test.js`); `npm run build` thành công.
+
+## Các task chưa làm
+
+- Chưa có task mới được chốt.
+
+---
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
